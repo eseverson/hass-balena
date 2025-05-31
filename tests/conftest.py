@@ -1,0 +1,370 @@
+"""Test configuration and fixtures for Balena Cloud integration."""
+from __future__ import annotations
+
+import json
+from typing import Any, Dict, Generator
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from aiohttp import ClientSession
+from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
+
+from custom_components.balena_cloud.const import DOMAIN
+
+
+@pytest.fixture
+def mock_aiohttp_session():
+    """Mock aiohttp ClientSession."""
+    session = AsyncMock(spec=ClientSession)
+    return session
+
+
+@pytest.fixture
+def mock_balena_api_response():
+    """Mock Balena Cloud API responses."""
+    return {
+        "user": {
+            "id": 12345,
+            "username": "test_user",
+            "email": "test@example.com",
+        },
+        "fleets": [
+            {
+                "id": 1001,
+                "app_name": "test-fleet-1",
+                "slug": "test_user/test-fleet-1",
+                "device_type": "raspberrypi4-64",
+                "created_at": "2024-01-01T00:00:00.000Z",
+            },
+            {
+                "id": 1002,
+                "app_name": "test-fleet-2",
+                "slug": "test_user/test-fleet-2",
+                "device_type": "jetson-orin-nano-devkit",
+                "created_at": "2024-01-02T00:00:00.000Z",
+            },
+        ],
+        "devices": [
+            {
+                "id": 2001,
+                "uuid": "device-uuid-1",
+                "device_name": "test-device-1",
+                "device_type": "raspberrypi4-64",
+                "belongs_to__application": {"__id": 1001, "app_name": "test-fleet-1"},
+                "is_online": True,
+                "status": "Idle",
+                "ip_address": "192.168.1.100",
+                "mac_address": "b8:27:eb:12:34:56",
+                "os_version": "balenaOS 2024.1.1",
+                "supervisor_version": "14.13.5",
+                "last_connectivity_event": "2024-01-15T10:30:00.000Z",
+                "created_at": "2024-01-01T12:00:00.000Z",
+            },
+            {
+                "id": 2002,
+                "uuid": "device-uuid-2",
+                "device_name": "test-device-2",
+                "device_type": "jetson-orin-nano-devkit",
+                "belongs_to__application": {"__id": 1002, "app_name": "test-fleet-2"},
+                "is_online": False,
+                "status": "Offline",
+                "ip_address": None,
+                "mac_address": "00:04:4b:12:34:56",
+                "os_version": "balenaOS 2024.1.0",
+                "supervisor_version": "14.13.3",
+                "last_connectivity_event": "2024-01-14T08:15:00.000Z",
+                "created_at": "2024-01-02T14:30:00.000Z",
+            },
+        ],
+        "device_metrics": {
+            "device-uuid-1": {
+                "cpu_usage": 25.5,
+                "memory_usage": 512000000,
+                "memory_total": 2000000000,
+                "storage_usage": 8000000000,
+                "storage_total": 32000000000,
+                "temperature": 45.2,
+            },
+            "device-uuid-2": {
+                "cpu_usage": None,
+                "memory_usage": None,
+                "memory_total": None,
+                "storage_usage": None,
+                "storage_total": None,
+                "temperature": None,
+            },
+        },
+    }
+
+
+@pytest.fixture
+def mock_config_entry():
+    """Mock config entry."""
+    return {
+        "entry_id": "test_entry_id",
+        "data": {
+            "api_token": "test_api_token_12345",
+            "fleets": [1001, 1002],
+        },
+        "options": {
+            "update_interval": 30,
+            "include_offline_devices": True,
+        },
+    }
+
+
+@pytest.fixture
+async def mock_integration_setup(hass: HomeAssistant, mock_config_entry):
+    """Set up the integration with mocked dependencies."""
+
+    with patch("custom_components.balena_cloud.BalenaCloudAPIClient") as mock_api, \
+         patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session:
+
+        # Configure API client mock
+        api_instance = AsyncMock()
+        mock_api.return_value = api_instance
+
+        # Configure session mock
+        mock_session.return_value = AsyncMock(spec=ClientSession)
+
+        # Set up the integration
+        assert await async_setup_component(
+            hass,
+            DOMAIN,
+            {DOMAIN: mock_config_entry["data"]},
+        )
+        await hass.async_block_till_done()
+
+        yield {
+            "api_client": api_instance,
+            "session": mock_session.return_value,
+        }
+
+
+@pytest.fixture
+def mock_rate_limit_response():
+    """Mock rate limit HTTP response."""
+    response = MagicMock()
+    response.status = 429
+    response.headers = {"X-RateLimit-Reset": "1705398000"}  # Future timestamp
+    response.text = AsyncMock(return_value="Rate limit exceeded")
+    return response
+
+
+@pytest.fixture
+def mock_auth_error_response():
+    """Mock authentication error HTTP response."""
+    response = MagicMock()
+    response.status = 401
+    response.headers = {}
+    response.text = AsyncMock(return_value="Unauthorized")
+    return response
+
+
+@pytest.fixture
+def mock_network_error():
+    """Mock network error."""
+    from aiohttp import ClientError
+    return ClientError("Network connection failed")
+
+
+@pytest.fixture
+def mock_timeout_error():
+    """Mock timeout error."""
+    import asyncio
+    return asyncio.TimeoutError()
+
+
+class MockHomeAssistant:
+    """Mock Home Assistant instance for testing."""
+
+    def __init__(self):
+        self.data = {}
+        self.states = AsyncMock()
+        self.services = AsyncMock()
+        self.bus = AsyncMock()
+        self.config_entries = AsyncMock()
+
+    async def async_block_till_done(self):
+        """Mock async_block_till_done."""
+        pass
+
+
+@pytest.fixture
+def mock_hass():
+    """Provide a mock Home Assistant instance."""
+    return MockHomeAssistant()
+
+
+@pytest.fixture
+def sample_automation_config():
+    """Sample automation configurations for testing."""
+    return {
+        "device_offline_alert": {
+            "alias": "Balena Device Offline Alert",
+            "trigger": {
+                "platform": "state",
+                "entity_id": "binary_sensor.test_device_1_online",
+                "to": "off",
+                "for": {"minutes": 5},
+            },
+            "action": {
+                "service": "notify.mobile_app",
+                "data": {
+                    "title": "Device Offline",
+                    "message": "{{ trigger.to_state.attributes.device_name }} went offline",
+                },
+            },
+        },
+        "high_cpu_restart": {
+            "alias": "Restart on High CPU",
+            "trigger": {
+                "platform": "numeric_state",
+                "entity_id": "sensor.test_device_1_cpu_usage",
+                "above": 90,
+                "for": {"minutes": 10},
+            },
+            "action": {
+                "service": "balena_cloud.restart_application",
+                "data": {
+                    "device_uuid": "device-uuid-1",
+                    "confirm": True,
+                },
+            },
+        },
+        "fleet_health_check": {
+            "alias": "Fleet Health Check",
+            "trigger": {
+                "platform": "time_pattern",
+                "hours": "/6",
+            },
+            "action": [
+                {
+                    "service": "balena_cloud.get_fleet_health",
+                    "data": {"fleet_id": 1001},
+                },
+                {
+                    "wait_for_trigger": {
+                        "platform": "event",
+                        "event_type": "balena_cloud_fleet_health_response",
+                    },
+                    "timeout": 30,
+                },
+                {
+                    "condition": "template",
+                    "value_template": "{{ wait.trigger.event.data.critical_devices > 0 }}",
+                },
+                {
+                    "service": "notify.admin",
+                    "data": {
+                        "title": "Fleet Health Alert",
+                        "message": "Fleet has {{ wait.trigger.event.data.critical_devices }} critical devices.",
+                    },
+                },
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def performance_test_data():
+    """Performance test data with large datasets."""
+
+    # Generate large fleet and device datasets
+    fleets = []
+    devices = []
+
+    for fleet_id in range(1000, 1050):  # 50 fleets
+        fleets.append({
+            "id": fleet_id,
+            "app_name": f"performance-fleet-{fleet_id}",
+            "slug": f"test_user/performance-fleet-{fleet_id}",
+            "device_type": "raspberrypi4-64",
+            "created_at": "2024-01-01T00:00:00.000Z",
+        })
+
+        # 20 devices per fleet = 1000 total devices
+        for device_idx in range(20):
+            device_id = fleet_id * 100 + device_idx
+            devices.append({
+                "id": device_id,
+                "uuid": f"perf-device-{device_id}",
+                "device_name": f"performance-device-{device_id}",
+                "device_type": "raspberrypi4-64",
+                "belongs_to__application": {"__id": fleet_id, "app_name": f"performance-fleet-{fleet_id}"},
+                "is_online": device_idx % 4 != 0,  # 75% online rate
+                "status": "Idle" if device_idx % 4 != 0 else "Offline",
+                "ip_address": f"192.168.1.{100 + device_idx}" if device_idx % 4 != 0 else None,
+                "mac_address": f"b8:27:eb:12:{device_idx:02x}:56",
+                "os_version": "balenaOS 2024.1.1",
+                "supervisor_version": "14.13.5",
+                "last_connectivity_event": "2024-01-15T10:30:00.000Z",
+                "created_at": "2024-01-01T12:00:00.000Z",
+            })
+
+    return {
+        "fleets": fleets,
+        "devices": devices,
+    }
+
+
+@pytest.fixture
+def security_test_scenarios():
+    """Security test scenarios and data."""
+    return {
+        "invalid_tokens": [
+            "",
+            "invalid_token",
+            "expired_token_12345",
+            "malicious_token_<script>",
+            "../../etc/passwd",
+            "'; DROP TABLE devices; --",
+        ],
+        "malicious_inputs": {
+            "device_uuid": [
+                "../../../etc/passwd",
+                "<script>alert('xss')</script>",
+                "'; DROP TABLE devices; --",
+                "device-uuid-1; rm -rf /",
+                {"malicious": "object"},
+                ["array", "input"],
+            ],
+            "service_name": [
+                "../../../bin/bash",
+                "; rm -rf /",
+                "service'; cat /etc/passwd #",
+                "<script>alert('xss')</script>",
+            ],
+            "environment_variables": {
+                "../../../etc/passwd": "malicious_value",
+                "NORMAL_VAR": "'; cat /etc/passwd #",
+                "XSS_VAR": "<script>alert('xss')</script>",
+                "SQL_INJECTION": "'; DROP TABLE devices; --",
+            },
+        },
+        "rate_limit_scenarios": [
+            {"requests_per_second": 10, "duration": 60},
+            {"requests_per_second": 50, "duration": 30},
+            {"requests_per_second": 100, "duration": 10},
+        ],
+    }
+
+
+# Test data validation helpers
+def validate_device_data(device_data: Dict[str, Any]) -> bool:
+    """Validate device data structure."""
+    required_fields = ["uuid", "device_name", "device_type", "is_online", "status"]
+    return all(field in device_data for field in required_fields)
+
+
+def validate_fleet_data(fleet_data: Dict[str, Any]) -> bool:
+    """Validate fleet data structure."""
+    required_fields = ["id", "app_name", "slug", "device_type"]
+    return all(field in fleet_data for field in required_fields)
+
+
+def validate_metrics_data(metrics_data: Dict[str, Any]) -> bool:
+    """Validate metrics data structure."""
+    expected_fields = ["cpu_usage", "memory_usage", "memory_total", "storage_usage", "storage_total"]
+    return any(field in metrics_data for field in expected_fields)
