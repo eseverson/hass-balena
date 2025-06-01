@@ -148,6 +148,7 @@ bulk_restart:
       selector:
         number:
           min: 1
+          max: 999999999
     service_name:
       name: Service Name
       description: Name of specific service to restart (optional)
@@ -181,6 +182,7 @@ bulk_reboot:
       selector:
         number:
           min: 1
+          max: 999999999
     confirm:
       name: Confirm Action
       description: Confirm the bulk reboot action
@@ -207,6 +209,7 @@ restart_fleet:
       selector:
         number:
           min: 1
+          max: 999999999
     service_name:
       name: Service Name
       description: Name of specific service to restart (optional)
@@ -232,3 +235,4 @@ get_fleet_health:
       selector:
         number:
           min: 1
+          max: 999999999

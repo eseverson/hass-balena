@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
-        home-assistant-version: ["2024.1.0", "latest"]
+        python-version: ["3.13"]
+        home-assistant-version: ["2025.5.3", "latest"]
 
     name: Test Python ${{ matrix.python-version }} with HA ${{ matrix.home-assistant-version }}
 
