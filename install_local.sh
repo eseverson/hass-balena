@@ -27,7 +27,6 @@ DEFAULT_PATHS=(
     "$HOME/.homeassistant"
     "$HOME/.config/homeassistant"
     "/home/homeassistant/.homeassistant"
-    "/usr/share/hassio/homeassistant"
 )
 
 # Function to find Home Assistant config directory
@@ -45,9 +44,9 @@ find_ha_config() {
     print_error "Could not automatically find Home Assistant configuration directory." >&2
     echo "" >&2
     echo "Common locations:" >&2
-    echo "  - /config (Home Assistant OS/Supervised)" >&2
-    echo "  - ~/.homeassistant (Home Assistant Core)" >&2
-    echo "  - ~/.config/homeassistant (Alternative Core location)" >&2
+    echo "  - /config (Home Assistant OS)" >&2
+    echo "  - ~/.homeassistant (Manual installation)" >&2
+    echo "  - ~/.config/homeassistant (Alternative location)" >&2
     echo "" >&2
     read -p "Enter full path to your HA config directory: " manual_path
 

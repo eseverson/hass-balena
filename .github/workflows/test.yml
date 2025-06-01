@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
-        home-assistant-version: ["2023.1.0", "2024.1.0", "latest"]
+        home-assistant-version: ["2024.1.0", "latest"]
 
     name: Test Python ${{ matrix.python-version }} with HA ${{ matrix.home-assistant-version }}
 

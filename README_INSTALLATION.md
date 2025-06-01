@@ -25,8 +25,7 @@ sudo chown -R $(whoami) ~/.config/homeassistant
 
 ### **Step 3: Restart Home Assistant**
 - **Home Assistant OS**: Settings > System > Hardware > Restart
-- **Home Assistant Core**: `sudo systemctl restart home-assistant@homeassistant`
-- **Docker**: `docker restart homeassistant`
+- **Container**: `docker restart homeassistant`
 
 ### **Step 4: Add the Integration**
 1. Go to Settings > Devices & Services
@@ -62,8 +61,8 @@ The script will prompt you to manually enter your Home Assistant config path.
 
 Common locations:
 - **Home Assistant OS**: `/config/`
-- **Home Assistant Core**: `~/.homeassistant/` or `~/.config/homeassistant/`
-- **Docker**: Your mounted `/config` volume
+- **Container**: Your mounted `/config` volume
+- **Manual Installation**: `~/.homeassistant/` or `~/.config/homeassistant/`
 - **Windows**: Use WSL or manual installation
 
 ### **Integration not appearing**
@@ -75,11 +74,14 @@ Common locations:
 
 For Windows users, we recommend:
 1. **Use WSL (Windows Subsystem for Linux)** - Run the bash script in WSL
-2. **Manual Installation** - Follow the detailed manual steps in [INSTALL_LOCAL.md](INSTALL_LOCAL.md)
+2. **Manual Installation** - Copy the `custom_components/balena_cloud` folder to your Home Assistant config directory
 
 ## Manual Installation (If Script Fails)
 
-If the automated script doesn't work, see [INSTALL_LOCAL.md](INSTALL_LOCAL.md) for detailed manual installation instructions.
+If the automated script doesn't work:
+1. Copy the `custom_components/balena_cloud/` folder to your Home Assistant config directory
+2. Restart Home Assistant
+3. Add the integration via Settings > Devices & Services
 
 ## Need Help?
 
