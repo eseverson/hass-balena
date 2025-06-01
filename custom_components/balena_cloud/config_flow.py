@@ -43,7 +43,7 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the config flow."""
         self.api_token: str | None = None
-        self.fleets: Dict[int, str] = {}
+        self.fleets: Dict[str, str] = {}
         self.user_info: Dict[str, Any] = {}
 
     async def async_step_user(
@@ -137,7 +137,7 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Create fleet selection schema
         fleet_options = {
-            fleet_id: f"{fleet_name} (ID: {fleet_id})"
+            str(fleet_id): f"{fleet_name} (ID: {fleet_id})"
             for fleet_id, fleet_name in self.fleets.items()
         }
 
@@ -181,7 +181,7 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             fleets_data = await api.async_get_fleets()
             self.fleets = {
-                fleet["id"]: fleet["app_name"]
+                str(fleet["id"]): fleet["app_name"]
                 for fleet in fleets_data
                 if fleet.get("id") and fleet.get("app_name")
             }

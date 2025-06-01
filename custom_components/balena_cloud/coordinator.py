@@ -102,10 +102,15 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
             # If specific fleets are selected, fetch only those
             if self.selected_fleets:
                 all_devices = []
-                for fleet_id in self.selected_fleets:
-                    if fleet_id in self.fleets:
-                        fleet_devices = await self.api.async_get_devices(fleet_id)
-                        all_devices.extend(fleet_devices)
+                for fleet_id_str in self.selected_fleets:
+                    try:
+                        fleet_id = int(fleet_id_str)
+                        if fleet_id in self.fleets:
+                            fleet_devices = await self.api.async_get_devices(fleet_id)
+                            all_devices.extend(fleet_devices)
+                    except (ValueError, TypeError) as err:
+                        _LOGGER.warning("Invalid fleet ID %s: %s", fleet_id_str, err)
+                        continue
             else:
                 # Fetch all devices
                 all_devices = await self.api.async_get_devices()
