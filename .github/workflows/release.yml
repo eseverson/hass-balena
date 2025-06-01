@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
     name: Prepare release
@@ -38,18 +42,14 @@ jobs:
       - name: 📦 Create release archive
         run: |
           cd custom_components
-          zip -r ../balena_cloud-${{ steps.version.outputs.VERSION_WITHOUT_V }}.zip balena_cloud/
+          zip -r ../balena_cloud.zip balena_cloud/
           cd ..
 
       - name: 📤 Upload release archive
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./balena_cloud-${{ steps.version.outputs.VERSION_WITHOUT_V }}.zip
-          asset_name: balena_cloud.zip
-          asset_content_type: application/zip
+        run: |
+          gh release upload ${{ steps.version.outputs.VERSION }} balena_cloud.zip --clobber
 
       - name: 📢 Update release notes
         uses: actions/github-script@v6
