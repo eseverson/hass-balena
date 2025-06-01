@@ -37,15 +37,6 @@ A comprehensive Home Assistant integration for monitoring and managing your Bale
 - **Switches**: Device power management
 - **Buttons**: Quick actions (restart, reboot, shutdown, URL management)
 
-## 🏗️ **Architecture**
-
-This integration uses the **official Balena SDK** (`balena-sdk>=15.0.0`) for reliable, robust communication with Balena Cloud APIs.
-
-### **Benefits of SDK Migration:**
-- ✅ **Official Support**: Maintained by Balena team
-- ✅ **Better Error Handling**: Comprehensive exception handling
-- ✅ **Automatic Retries**: Built-in retry logic for reliability
-- ✅ **Future-Proof**: Access to new Balena features as they're released
 
 ## 📦 Installation
 
@@ -140,14 +131,6 @@ pip install -r requirements.txt
 pytest tests/
 ```
 
-## 📝 Changelog
-
-### **v1.0.0**
-- ✨ **Complete SDK Migration**: Migrated from direct HTTP calls to official `balena-sdk`
-- 🎨 **Official Branding**: Added Balena logo and proper visual identity
-- 🔧 **Enhanced Features**: Added device URL management and shutdown capabilities
-- 🐛 **Bug Fixes**: Resolved Home Assistant compatibility issues
-- 📚 **Improved Documentation**: Comprehensive setup and usage guides
 
 ## 🤝 Contributing
 

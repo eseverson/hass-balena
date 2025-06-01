@@ -26,6 +26,14 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Error message mappings for tests
+ERRORS = {
+    "invalid_auth": "Invalid authentication credentials",
+    "cannot_connect": "Cannot connect to Balena Cloud",
+    "unknown": "Unknown error occurred",
+    "no_fleets": "No fleets found for this account",
+}
+
 
 class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

@@ -1,0 +1,150 @@
+name: 🐛 Bug Report
+description: File a bug report to help us improve the Balena Cloud integration
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+assignees:
+  - eseverson
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for reporting a bug! 🐛
+
+        Please fill out the following information to help us understand and reproduce the issue.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      description: Please verify these items before submitting
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have checked the documentation and followed the setup instructions
+          required: true
+        - label: I am using a supported version of Home Assistant (2023.1.0+)
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the issue you're experiencing...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe what should have happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Integration Version
+      description: What version of the Balena Cloud integration are you using?
+      placeholder: e.g., 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: home-assistant-version
+    attributes:
+      label: Home Assistant Version
+      description: What version of Home Assistant are you running?
+      placeholder: e.g., 2024.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation Method
+      description: How did you install the integration?
+      options:
+        - HACS
+        - Manual Installation
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+
+        To get logs:
+        1. Go to Settings → System → Logs
+        2. Search for "balena_cloud" or "custom_components.balena_cloud"
+        3. Copy the relevant entries
+      render: text
+      placeholder: Paste log entries here...
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        Share your integration configuration (remove sensitive data like API tokens)
+      render: yaml
+      placeholder: |
+        # Example configuration
+        api_token: "***REDACTED***"
+        fleets: [12345]
+        update_interval: 30
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: |
+        - Balena Cloud setup details
+        - Device types involved
+        - Network configuration
+        - Any other relevant information...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Bug Severity
+      description: How severe is this bug?
+      options:
+        - Low - Cosmetic issue, workaround available
+        - Medium - Functionality affected but usable
+        - High - Major functionality broken
+        - Critical - Integration completely unusable
+    validations:
+      required: true

@@ -197,6 +197,113 @@ def mock_hass():
     return MockHomeAssistant()
 
 
+# Alias for the hass fixture that tests expect
+@pytest.fixture
+def hass(mock_hass):
+    """Alias for mock_hass fixture to match test expectations."""
+    return mock_hass
+
+
+@pytest.fixture
+def mock_device():
+    """Mock Balena device for testing."""
+    device = MagicMock()
+    device.uuid = "device-uuid-1"
+    device.display_name = "Test Device 1"
+    device.device_name = "Test Device 1"
+    device.device_type = "raspberrypi4-64"
+    device.fleet_id = 1001
+    device.fleet_name = "test-fleet-1"
+    device.is_online = True
+    device.status = "Idle"
+    device.ip_address = "192.168.1.100"
+    device.mac_address = "b8:27:eb:12:34:56"
+    device.os_version = "balenaOS 2024.1.1"
+    device.supervisor_version = "14.13.5"
+    device.last_connectivity_event = "2024-01-15T10:30:00.000Z"
+    device.created_at = "2024-01-01T12:00:00.000Z"
+
+    # Mock metrics
+    device.metrics = MagicMock()
+    device.metrics.cpu_usage = 25.5
+    device.metrics.cpu_percentage = 25.5
+    device.metrics.memory_usage = 512000000
+    device.metrics.memory_total = 2000000000
+    device.metrics.memory_percentage = 25.6
+    device.metrics.storage_usage = 8000000000
+    device.metrics.storage_total = 32000000000
+    device.metrics.storage_percentage = 25.0
+    device.metrics.temperature = 45.2
+
+    return device
+
+
+@pytest.fixture
+def mock_device_with_metrics():
+    """Mock Balena device with metrics for testing."""
+    from custom_components.balena_cloud.models import BalenaDevice, BalenaDeviceMetrics
+    from datetime import datetime
+
+    # Create the device using the actual model
+    device = BalenaDevice(
+        uuid="test-device-uuid-12345",
+        device_name="Test Device",
+        device_type="raspberrypi4-64",
+        fleet_id=1001,
+        fleet_name="test-fleet",
+        is_online=True,
+        status="Idle",
+        ip_address="192.168.1.100",
+        mac_address="b8:27:eb:12:34:56",
+        os_version="balenaOS 2024.1.1",
+        supervisor_version="14.13.5",
+        last_connectivity_event=datetime.fromisoformat("2024-01-15T10:30:00"),
+        created_at=datetime.fromisoformat("2024-01-01T12:00:00"),
+    )
+
+    # Add metrics
+    device.metrics = BalenaDeviceMetrics(
+        cpu_usage=25.5,
+        memory_usage=512000000,
+        memory_total=2000000000,
+        storage_usage=8000000000,
+        storage_total=32000000000,
+        temperature=45.2,
+    )
+
+    return device
+
+
+@pytest.fixture
+def mock_coordinator_setup():
+    """Set up mock coordinator for testing."""
+    from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
+
+    mock_hass = AsyncMock()
+
+    config_data = {
+        "api_token": "test_token_12345",
+        "fleets": [1001, 1002],
+    }
+
+    config_options = {
+        "update_interval": 30,
+        "include_offline_devices": True,
+    }
+
+    # Create coordinator with correct constructor signature (3 args: hass, config_data, options)
+    coordinator = BalenaCloudDataUpdateCoordinator(
+        mock_hass,
+        config_data,
+        config_options,
+    )
+
+    # Mock the API client
+    coordinator.api = AsyncMock()
+
+    return coordinator, mock_hass, config_data
+
+
 @pytest.fixture
 def sample_automation_config():
     """Sample automation configurations for testing."""

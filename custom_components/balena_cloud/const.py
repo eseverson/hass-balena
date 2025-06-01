@@ -7,6 +7,11 @@ from typing import Final
 # Integration domain
 DOMAIN: Final = "balena_cloud"
 
+# API Configuration
+BALENA_API_BASE_URL: Final = "https://api.balena-cloud.com"
+BALENA_API_VERSION: Final = "v6"
+API_TIMEOUT: Final = 30  # seconds
+
 # Configuration keys
 CONF_API_TOKEN: Final = "api_token"
 CONF_FLEETS: Final = "fleets"

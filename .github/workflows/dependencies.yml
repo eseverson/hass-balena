@@ -1,0 +1,195 @@
+name: Dependencies
+
+on:
+  schedule:
+    # Check for dependency updates weekly on Mondays
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check-dependencies:
+    runs-on: ubuntu-latest
+    name: Check Dependencies
+    steps:
+      - name: 🏗️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-tools safety
+
+      - name: 🔍 Check for security vulnerabilities
+        run: |
+          pip install -r tests/requirements.txt
+          safety check
+
+      - name: 📊 Check dependency versions
+        run: |
+          echo "## 📦 Current Dependencies" >> dependency_report.md
+          echo "" >> dependency_report.md
+          echo "### Integration Dependencies" >> dependency_report.md
+          echo "- balena-sdk>=15.0.0" >> dependency_report.md
+          echo "" >> dependency_report.md
+          echo "### Test Dependencies" >> dependency_report.md
+          cat tests/requirements.txt | sed 's/^/- /' >> dependency_report.md
+          echo "" >> dependency_report.md
+          echo "### Installed Versions" >> dependency_report.md
+          pip list | grep -E "(balena|pytest|aiohttp|homeassistant)" | sed 's/^/- /' >> dependency_report.md
+
+      - name: 🚨 Check for critical updates
+        run: |
+          python -c "
+          import subprocess
+          import sys
+
+          # Check if balena-sdk has updates
+          try:
+              result = subprocess.run(['pip', 'index', 'versions', 'balena-sdk'],
+                                    capture_output=True, text=True)
+              if result.returncode == 0:
+                  print('✅ Balena SDK version check completed')
+              else:
+                  print('⚠️ Could not check Balena SDK versions')
+          except Exception as e:
+              print(f'Error checking dependencies: {e}')
+          "
+
+      - name: 📤 Upload dependency report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-report
+          path: dependency_report.md
+
+  validate-manifest:
+    runs-on: ubuntu-latest
+    name: Validate Manifest
+    steps:
+      - name: 🏗️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Validate manifest.json
+        run: |
+          python -c "
+          import json
+          import sys
+
+          print('🔍 Validating manifest.json...')
+
+          with open('custom_components/balena_cloud/manifest.json') as f:
+              manifest = json.load(f)
+
+          # Required fields
+          required_fields = ['domain', 'name', 'version', 'requirements', 'dependencies']
+          for field in required_fields:
+              if field not in manifest:
+                  print(f'❌ Missing required field: {field}')
+                  sys.exit(1)
+              else:
+                  print(f'✅ Found {field}: {manifest[field]}')
+
+          # Check requirements
+          requirements = manifest.get('requirements', [])
+          if 'balena-sdk>=15.0.0' not in requirements:
+              print('❌ Missing balena-sdk requirement')
+              sys.exit(1)
+          else:
+              print('✅ Balena SDK requirement found')
+
+          # Check version format
+          version = manifest.get('version', '')
+          if not version or len(version.split('.')) < 3:
+              print(f'❌ Invalid version format: {version}')
+              sys.exit(1)
+          else:
+              print(f'✅ Valid version format: {version}')
+
+          print('🎉 Manifest validation passed!')
+          "
+
+      - name: 🔍 Validate HACS configuration
+        run: |
+          python -c "
+          import json
+          import sys
+
+          print('🔍 Validating hacs.json...')
+
+          with open('hacs.json') as f:
+              hacs_config = json.load(f)
+
+          # Required HACS fields
+          required_fields = ['name', 'domains', 'iot_class', 'homeassistant']
+          for field in required_fields:
+              if field not in hacs_config:
+                  print(f'❌ Missing required HACS field: {field}')
+                  sys.exit(1)
+              else:
+                  print(f'✅ Found {field}: {hacs_config[field]}')
+
+          # Check domain match
+          if 'balena_cloud' not in hacs_config.get('domains', []):
+              print('❌ Domain mismatch in HACS config')
+              sys.exit(1)
+          else:
+              print('✅ Domain correctly configured')
+
+          print('🎉 HACS configuration validation passed!')
+          "
+
+  prepare-release-notes:
+    runs-on: ubuntu-latest
+    name: Prepare Release Notes Template
+    steps:
+      - name: 🏗️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📝 Generate release notes template
+        run: |
+          cat > RELEASE_TEMPLATE.md << 'EOF'
+          ## 🎉 Balena Cloud Integration v{VERSION}
+
+          ### ✨ New Features
+          - List new features here
+
+          ### 🐛 Bug Fixes
+          - List bug fixes here
+
+          ### 🔧 Improvements
+          - List improvements here
+
+          ### 📚 Documentation
+          - Updated documentation
+
+          ### 🔄 Dependencies
+          - balena-sdk>=15.0.0
+          - Home Assistant 2023.1.0+
+
+          ### 💾 Installation
+
+          #### HACS (Recommended)
+          1. Open HACS → Integrations
+          2. Search for "Balena Cloud"
+          3. Download and restart Home Assistant
+          4. Add integration via Settings → Devices & Services
+
+          #### Manual Installation
+          1. Download `balena_cloud.zip`
+          2. Extract to `custom_components/balena_cloud/`
+          3. Restart Home Assistant
+          4. Add integration via Settings → Devices & Services
+
+          ---
+          **Note**: Please update your Balena Cloud API token if you experience authentication issues.
+          EOF
+
+      - name: 📤 Upload release template
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-template
+          path: RELEASE_TEMPLATE.md

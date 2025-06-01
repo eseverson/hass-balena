@@ -33,6 +33,11 @@ class BalenaFleet:
             modified_at=_parse_datetime(data.get("__metadata", {}).get("modified_at")),
         )
 
+    @property
+    def display_name(self) -> str:
+        """Get display name for the fleet."""
+        return self.app_name
+
 
 @dataclass
 class BalenaDeviceMetrics:
@@ -44,6 +49,18 @@ class BalenaDeviceMetrics:
     storage_usage: Optional[int] = None
     storage_total: Optional[int] = None
     temperature: Optional[float] = None
+
+    @classmethod
+    def from_api_data(cls, data: Dict[str, Any]) -> BalenaDeviceMetrics:
+        """Create a BalenaDeviceMetrics from API response data."""
+        return cls(
+            cpu_usage=data.get("cpu_usage"),
+            memory_usage=data.get("memory_usage"),
+            memory_total=data.get("memory_total"),
+            storage_usage=data.get("storage_usage"),
+            storage_total=data.get("storage_total"),
+            temperature=data.get("temperature"),
+        )
 
     @property
     def cpu_percentage(self) -> Optional[float]:
@@ -123,7 +140,9 @@ class BalenaDevice:
     @property
     def display_name(self) -> str:
         """Get display name for the device."""
-        return self.device_name or f"Device {self.uuid[:8]}"
+        if self.device_name:
+            return self.device_name
+        return self.uuid
 
     @property
     def is_updating(self) -> bool:

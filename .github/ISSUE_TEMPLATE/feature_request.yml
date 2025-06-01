@@ -1,0 +1,118 @@
+name: ✨ Feature Request
+description: Suggest a new feature for the Balena Cloud integration
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+assignees:
+  - eseverson
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for your feature suggestion! ✨
+
+        Please describe your idea and help us understand how it would improve the integration.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      description: Please verify these items before submitting
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have checked the documentation to see if this feature already exists
+          required: true
+        - label: This feature would be useful for other users, not just my specific use case
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve? What limitation are you facing?
+      placeholder: Describe the problem or limitation you're experiencing...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your ideal solution to this problem
+      placeholder: Describe how you'd like this feature to work...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: Describe any alternatives you've considered...
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - Device Management
+        - Fleet Management
+        - Monitoring & Alerts
+        - API Enhancement
+        - User Interface
+        - Configuration
+        - Automation & Services
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my workflow
+        - High - Blocking my use case
+        - Critical - Essential for adoption
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your specific use case and how this feature would help
+      placeholder: |
+        Example:
+        - I manage 50+ Raspberry Pi devices across multiple locations
+        - I need to monitor device health and automatically restart failed services
+        - This feature would help me...
+
+  - type: textarea
+    id: technical-details
+    attributes:
+      label: Technical Details
+      description: Any technical considerations or implementation ideas?
+      placeholder: |
+        - Balena Cloud API endpoints involved
+        - Home Assistant platform integration points
+        - Performance considerations
+        - Security implications
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples
+      placeholder: |
+        - Links to relevant Balena Cloud documentation
+        - Screenshots of desired behavior
+        - Examples from other integrations
+        - Any other relevant information...
