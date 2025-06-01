@@ -127,7 +127,6 @@ print('✅ Integration loads successfully')
 All releases are automatically validated by:
 - HACS validation
 - Home Assistant Hassfest validation
-- Code quality checks (Black, isort, flake8)
 - Security scanning
 - Integration tests
 

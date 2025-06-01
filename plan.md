@@ -22,11 +22,9 @@ This development plan outlines the comprehensive roadmap for building a HACS plu
 
 ### Development Tools and CI/CD
 - [ ] Configure GitHub Actions for automated testing
-  - Set up Python linting (flake8, black, isort)
   - Configure pytest for unit testing
   - Set up Home Assistant integration validation
 - [ ] Set up pre-commit hooks
-  - Code formatting and linting checks
   - Integration manifest validation
 - [ ] Create development documentation structure
   - API documentation templates

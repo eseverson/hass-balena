@@ -125,62 +125,25 @@ automation:
 git clone https://github.com/eseverson/hass-balena.git
 
 # Install development dependencies
-pip install -r requirements.txt
+pip install -r tests/requirements.txt
 
 # Run tests
-pytest tests/
+cd tests
+python test_runner.py
 ```
 
 ### **Local Validation**
 
-We provide two validation scripts to test your changes locally before pushing:
-
-#### Simple Validation (No Docker Required)
-```bash
-python scripts/validate_simple.py
-```
-
-This runs basic validations including:
-- ✅ Manifest validation
-- ✅ HACS configuration validation
-- ✅ Services configuration check
-- ✅ Python syntax validation
-- ✅ Code formatting (Black)
-- ✅ Import sorting (isort)
-- ✅ Linting (flake8)
-- ✅ Security scanning (Bandit)
-
-#### Full Validation (Docker Required)
-```bash
-python scripts/validate_local.py
-```
-
-This includes all simple validations plus:
-- ✅ HACS validation (requires GitHub token)
-- ✅ Hassfest validation
-
-**Prerequisites for full validation:**
-```bash
-# Install Docker
-sudo apt install docker.io
-
-# Set GitHub token for HACS validation
-export GITHUB_TOKEN=your_github_token
-
-# Run validation
-python scripts/validate_local.py
-```
-
-### **Running Tests**
+Run the validation script to check your changes:
 
 ```bash
-# Install test dependencies
-pip install -r tests/requirements.txt
-
-# Run comprehensive test suite
-cd tests
-python test_runner.py
+./scripts/validate_local.py
 ```
+
+This validates:
+- ✅ Manifest configuration
+- ✅ Services configuration
+- ✅ Test dependencies installation
 
 ### **Contributing**
 

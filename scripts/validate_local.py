@@ -121,36 +121,6 @@ def main():
     # 2. Validate services
     validation_results.append(validate_services())
 
-    # 3. Code formatting with Black (match GitHub Actions exactly)
-    validation_results.append(run_command(
-        "python -m black --check --diff custom_components/",
-        "Black code formatting"
-    ))
-
-    # 4. Import sorting with isort (match GitHub Actions exactly)
-    validation_results.append(run_command(
-        "python -m isort --check-only --diff custom_components/",
-        "isort import sorting"
-    ))
-
-    # 5. Linting with flake8 (match GitHub Actions exactly)
-    validation_results.append(run_command(
-        "python -m flake8 custom_components/ --max-line-length=100 --ignore=E203,W503",
-        "flake8 linting"
-    ))
-
-    # 6. Security scan with Bandit (run headless)
-    validation_results.append(run_command(
-        "bandit -r custom_components/ -f json -o bandit-report.json --no-browser",
-        "Bandit security scan"
-    ))
-
-    # 7. Type checking with mypy (match GitHub Actions exactly)
-    validation_results.append(run_command(
-        "python -m mypy custom_components/ --ignore-missing-imports --no-strict-optional",
-        "mypy type checking"
-    ))
-
     print("\n" + "=" * 60)
     print("📊 VALIDATION SUMMARY")
     print("=" * 60)

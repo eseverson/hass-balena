@@ -42,14 +42,6 @@ Please describe the tests that you ran to verify your changes:
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published
 
-## Code Quality
-
-- [ ] Code follows Black formatting standards
-- [ ] Imports are sorted with isort
-- [ ] No linting errors with flake8
-- [ ] Type hints are provided where appropriate
-- [ ] Docstrings are updated for new/modified functions
-
 ## Integration Compatibility
 
 - [ ] Changes are backward compatible with existing configurations
