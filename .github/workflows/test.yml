@@ -63,7 +63,7 @@ jobs:
 
       - name: 📤 Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-py${{ matrix.python-version }}-ha${{ matrix.home-assistant-version }}
           path: |
@@ -78,13 +78,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔍 Run Bandit security scan
-        uses: tj-actions/bandit@v5.1
+        uses: tj-actions/bandit@v5.5
         with:
           options: "-r custom_components/ -f json -o bandit-report.json"
 
       - name: 📊 Upload security scan results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-scan-results
           path: bandit-report.json

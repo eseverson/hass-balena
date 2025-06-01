@@ -61,7 +61,7 @@ jobs:
           "
 
       - name: 📤 Upload dependency report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dependency-report
           path: dependency_report.md
@@ -188,7 +188,7 @@ jobs:
           EOF
 
       - name: 📤 Upload release template
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-template
           path: RELEASE_TEMPLATE.md
