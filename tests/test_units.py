@@ -475,7 +475,7 @@ class TestConfigurationFlowUnit:
             # Verify the API client was created with the correct token
             mock_api_class.assert_called_once_with("test_token_12345")
             # Verify the fleets were parsed correctly
-            assert mock_config_flow.fleets == {1001: "fleet-1", 1002: "fleet-2"}
+            assert mock_config_flow.fleets == {"1001": "fleet-1", "1002": "fleet-2"}
 
     @pytest.mark.asyncio
     async def test_config_flow_user_step_form_validation(self, mock_config_flow):
