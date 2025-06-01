@@ -21,21 +21,16 @@ A comprehensive Home Assistant integration for monitoring and managing your Bale
 - **Environment Variables**: Update device environment variables
 
 ### 🌐 **Services Available**
-- `balena_cloud.restart_application` - Restart device applications
-- `balena_cloud.reboot_device` - Reboot devices
-- `balena_cloud.shutdown_device` - Shutdown devices
-- `balena_cloud.enable_device_url` - Enable public device URLs
-- `balena_cloud.disable_device_url` - Disable public device URLs
-- `balena_cloud.get_device_url` - Get device public URLs
-- `balena_cloud.update_environment` - Update environment variables
-- `balena_cloud.bulk_restart` - Bulk restart operations
-- `balena_cloud.bulk_reboot` - Bulk reboot operations
+- `balena_cloud.restart_application` - Restart device application
+- `balena_cloud.reboot_device` - Reboot a device
+- `balena_cloud.shutdown_device` - Shutdown a device
+- `balena_cloud.update_environment_variables` - Update device environment variables
 
 ### 📱 **Entity Types**
 - **Sensors**: CPU, memory, storage, temperature metrics
 - **Binary Sensors**: Device connectivity and update status
-- **Switches**: Device power management
-- **Buttons**: Quick actions (restart, reboot, shutdown, URL management)
+- **Switches**: Public URL management and device power control
+- **Buttons**: Quick actions (restart, reboot, shutdown)
 
 
 ## 📦 Installation

@@ -26,21 +26,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Balena Cloud switch platform."""
-    # For now, we don't have any switch entities
-    # This platform is prepared for future switch-like entities
-    # such as device power management, development mode toggles, etc.
+    coordinator: BalenaCloudDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.entry_id
+    ]
 
-    # Example: Device power switch entities could be added here
-    # coordinator: BalenaCloudDataUpdateCoordinator = hass.data[DOMAIN][
-    #     config_entry.entry_id
-    # ]
-    # switches = []
-    # for device_uuid, device in coordinator.devices.items():
-    #     switches.append(BalenaCloudDevicePowerSwitch(coordinator, device_uuid))
-    # async_add_entities(switches)
+    switches = []
+    for device_uuid, device in coordinator.devices.items():
+        switches.append(BalenaCloudPublicUrlSwitch(coordinator, device_uuid))
 
-    # Currently no switch entities to add
-    async_add_entities([])
+    async_add_entities(switches)
 
 
 class BalenaCloudSwitchEntity(
@@ -121,3 +115,110 @@ class BalenaCloudSwitchEntity(
             configuration_url=f"https://dashboard.balena-cloud.com/devices/{self.device.uuid}",
             via_device=(DOMAIN, f"fleet_{self.device.fleet_id}"),
         )
+
+
+class BalenaCloudPublicUrlSwitch(BalenaCloudSwitchEntity):
+    """Toggle for device public URL."""
+
+    def __init__(
+        self,
+        coordinator: BalenaCloudDataUpdateCoordinator,
+        device_uuid: str,
+    ) -> None:
+        """Initialize the public URL switch."""
+        super().__init__(coordinator, device_uuid, "public_url")
+        self._attr_name = "Public URL"
+        self._attr_icon = "mdi:web"
+        self._cached_url = None
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        if self.device:
+            return f"{self.device.display_name} Public URL"
+        return "Unknown Device Public URL"
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if public URL is enabled."""
+        # We determine this by checking if we can get a URL
+        # This will be updated during coordinator refresh
+        return self._cached_url is not None
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable public device URL."""
+        if not self.device:
+            _LOGGER.error("Device not found for public URL switch %s", self._attr_unique_id)
+            return
+
+        _LOGGER.info("Enabling public URL for device %s", self.device.display_name)
+
+        try:
+            success = await self.coordinator.async_enable_device_url(self._device_uuid)
+            if success:
+                # Get the URL and cache it
+                url = await self.coordinator.async_get_device_url(self._device_uuid)
+                self._cached_url = url
+                _LOGGER.info(
+                    "Successfully enabled public URL for device %s: %s",
+                    self.device.display_name,
+                    url or "URL not immediately available"
+                )
+                self.async_write_ha_state()
+            else:
+                _LOGGER.error(
+                    "Failed to enable public URL for device %s",
+                    self.device.display_name,
+                )
+        except Exception as err:
+            _LOGGER.error(
+                "Error enabling public URL for device %s: %s",
+                self.device.display_name,
+                err,
+            )
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable public device URL."""
+        if not self.device:
+            _LOGGER.error("Device not found for public URL switch %s", self._attr_unique_id)
+            return
+
+        _LOGGER.info("Disabling public URL for device %s", self.device.display_name)
+
+        try:
+            success = await self.coordinator.async_disable_device_url(self._device_uuid)
+            if success:
+                self._cached_url = None
+                _LOGGER.info(
+                    "Successfully disabled public URL for device %s",
+                    self.device.display_name,
+                )
+                self.async_write_ha_state()
+            else:
+                _LOGGER.error(
+                    "Failed to disable public URL for device %s",
+                    self.device.display_name,
+                )
+        except Exception as err:
+            _LOGGER.error(
+                "Error disabling public URL for device %s: %s",
+                self.device.display_name,
+                err,
+            )
+
+    async def async_update(self) -> None:
+        """Update the switch state by checking current URL."""
+        try:
+            url = await self.coordinator.async_get_device_url(self._device_uuid)
+            self._cached_url = url
+        except Exception as err:
+            _LOGGER.debug("Could not update public URL state for %s: %s", self._device_uuid, err)
+            # Don't change cached state on error
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = super().extra_state_attributes
+        if self._cached_url:
+            attrs["public_url"] = self._cached_url
+        return attrs

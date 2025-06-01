@@ -62,22 +62,6 @@ BUTTON_TYPES: tuple[BalenaCloudButtonEntityDescription, ...] = (
             device_uuid
         ),
     ),
-    BalenaCloudButtonEntityDescription(
-        key="enable_device_url",
-        name="Enable Public Device URL",
-        icon="mdi:web",
-        action_fn=lambda coordinator, device_uuid: coordinator.async_enable_device_url(
-            device_uuid
-        ),
-    ),
-    BalenaCloudButtonEntityDescription(
-        key="disable_device_url",
-        name="Disable Public Device URL",
-        icon="mdi:web-off",
-        action_fn=lambda coordinator, device_uuid: coordinator.async_disable_device_url(
-            device_uuid
-        ),
-    ),
 )
 
 
@@ -164,14 +148,6 @@ class BalenaCloudButtonEntity(
                     self.entity_description.name,
                     self.device.display_name,
                 )
-
-                # For device URL operations, also get and log the URL
-                if self.entity_description.key == "enable_device_url":
-                    url = await self.coordinator.async_get_device_url(self._device_uuid)
-                    if url:
-                        _LOGGER.info(
-                            "Device URL for %s: %s", self.device.display_name, url
-                        )
             else:
                 _LOGGER.error(
                     "Failed to execute %s for device %s",
