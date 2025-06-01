@@ -96,7 +96,7 @@ SENSOR_TYPES: tuple[BalenaCloudSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon=ICON_TEMPERATURE,
         value_fn=lambda device: (
-            device.metrics.temperature if device.metrics else None
+            device.metrics.temperature_rounded if device.metrics else None
         ),
     ),
 )

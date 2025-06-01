@@ -227,7 +227,7 @@ class TestBalenaDeviceMetricsUnit:
         metrics = BalenaDeviceMetrics.from_api_data(api_data)
         assert metrics.cpu_usage == 30.5
         assert metrics.memory_percentage == 37.5  # 1.5GB/4GB
-        assert metrics.storage_percentage == 31.25  # 20GB/64GB
+        assert metrics.storage_percentage == 31.2  # 20GB/64GB (rounded to 1 decimal)
         assert metrics.temperature == 55.3
 
 

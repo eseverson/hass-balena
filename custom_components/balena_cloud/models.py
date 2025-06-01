@@ -66,7 +66,9 @@ class BalenaDeviceMetrics:
     @property
     def cpu_percentage(self) -> Optional[float]:
         """Get CPU usage as percentage."""
-        return self.cpu_usage
+        if self.cpu_usage is not None:
+            return round(self.cpu_usage, 1)
+        return None
 
     @property
     def memory_percentage(self) -> Optional[float]:
@@ -76,7 +78,7 @@ class BalenaDeviceMetrics:
             and self.memory_total is not None
             and self.memory_total > 0
         ):
-            return (self.memory_usage / self.memory_total) * 100
+            return round((self.memory_usage / self.memory_total) * 100, 1)
         return None
 
     @property
@@ -87,7 +89,14 @@ class BalenaDeviceMetrics:
             and self.storage_total is not None
             and self.storage_total > 0
         ):
-            return (self.storage_usage / self.storage_total) * 100
+            return round((self.storage_usage / self.storage_total) * 100, 1)
+        return None
+
+    @property
+    def temperature_rounded(self) -> Optional[float]:
+        """Get temperature rounded to 1 decimal place."""
+        if self.temperature is not None:
+            return round(self.temperature, 1)
         return None
 
 
