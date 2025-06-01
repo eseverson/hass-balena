@@ -12,7 +12,10 @@ def run_command(cmd, description):
     """Run a command and report the result."""
     print(f"🔍 {description}...")
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # Set DISPLAY to empty to run headless
+        env = os.environ.copy()
+        env['DISPLAY'] = ''
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, env=env)
         if result.returncode == 0:
             print(f"✅ {description} - PASSED")
             return True
@@ -26,147 +29,6 @@ def run_command(cmd, description):
     except Exception as e:
         print(f"❌ {description} - ERROR: {e}")
         return False
-
-
-def check_docker():
-    """Check if Docker is available."""
-    try:
-        result = subprocess.run(["docker", "--version"], capture_output=True, text=True)
-        return result.returncode == 0
-    except:
-        return False
-
-
-def validate_hacs():
-    """Run HACS validation using Docker."""
-    print("🔍 Running HACS validation...")
-
-    if not check_docker():
-        print("⚠️ Docker not available - Skipping HACS validation")
-        print("   Install Docker to run HACS validation locally")
-        return True  # Don't fail if Docker is not available
-
-    # Check if we have a GitHub token
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if not github_token:
-        print("⚠️ GITHUB_TOKEN not set - Skipping HACS validation")
-        print("   Set GITHUB_TOKEN environment variable to run HACS validation")
-        print("   Example: export GITHUB_TOKEN=your_github_token")
-        print("   Or use: GITHUB_TOKEN=your_token python scripts/validate_local.py")
-        return True  # Don't fail if token is not available
-
-    # Note: The HACS action is designed specifically for GitHub Actions environment
-    # and expects automatic access to secrets.GITHUB_TOKEN, not manual token passing
-    print("   ⚠️ HACS validation locally has limitations")
-    print("   The HACS action is designed for GitHub Actions, not local Docker usage")
-
-    # Try to run HACS validation but don't fail if it doesn't work perfectly
-    try:
-        # Use a different approach - try to use HACS Python package directly
-        # if it's available, or provide manual validation steps
-        cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{os.getcwd()}:/github/workspace",
-            "-e", "GITHUB_WORKSPACE=/github/workspace",
-            "-e", f"GITHUB_TOKEN={github_token}",
-            "-e", "INPUT_CATEGORY=integration",
-            "-e", "INPUT_IGNORE=brands",
-            "ghcr.io/hacs/action:main"
-        ]
-
-        print(f"   🐳 Attempting HACS validation...")
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if result.returncode == 0:
-            print("✅ HACS validation - PASSED")
-            return True
-        else:
-            # Check if it's the token issue specifically
-            if "No GitHub token found" in result.stderr:
-                print("⚠️ HACS validation - SKIPPED (Token not recognized by HACS action)")
-                print("   This is expected when running locally vs in GitHub Actions")
-                print("   Your GitHub token is valid, but the HACS Docker action")
-                print("   expects to run in a GitHub Actions environment")
-                print("   Manual checks:")
-                print("   ✓ manifest.json is valid")
-                print("   ✓ Repository structure looks correct")
-                print("   ✓ Will be validated automatically when pushed to GitHub")
-                return True  # Don't fail for expected token issue
-            else:
-                print("❌ HACS validation - FAILED")
-                if result.stdout:
-                    print("STDOUT:", result.stdout)
-                if result.stderr:
-                    print("STDERR:", result.stderr)
-                return False
-    except subprocess.TimeoutExpired:
-        print("⚠️ HACS validation - TIMEOUT")
-        print("   HACS action took too long, will validate in GitHub Actions")
-        return True  # Don't fail on timeout for local validation
-    except Exception as e:
-        print(f"⚠️ HACS validation - SKIPPED: {e}")
-        print("   This is expected when running locally")
-        print("   HACS validation will run properly in GitHub Actions")
-        return True  # Don't fail for expected local issues
-
-
-def validate_hassfest():
-    """Run Hassfest validation using Docker."""
-    print("🔍 Running Hassfest validation...")
-
-    if not check_docker():
-        print("⚠️ Docker not available - Skipping Hassfest validation")
-        print("   Install Docker to run Hassfest validation locally")
-        return True  # Don't fail if Docker is not available
-
-    # Try multiple possible Hassfest action locations
-    hassfest_images = [
-        "ghcr.io/home-assistant/actions:hassfest",
-        "homeassistant/home-assistant:dev",
-    ]
-
-    for image in hassfest_images:
-        try:
-            print(f"   Trying Hassfest with image: {image}")
-
-            if "home-assistant:dev" in image:
-                # Use Home Assistant dev image with hassfest command
-                cmd = [
-                    "docker", "run", "--rm",
-                    "-v", f"{os.getcwd()}:/config",
-                    image,
-                    "python", "-m", "homeassistant.scripts.hassfest",
-                    "--integration-path", "/config/custom_components/balena_cloud"
-                ]
-            else:
-                # Use official action image
-                cmd = [
-                    "docker", "run", "--rm",
-                    "-v", f"{os.getcwd()}:/github/workspace",
-                    "-e", "GITHUB_WORKSPACE=/github/workspace",
-                    image
-                ]
-
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            if result.returncode == 0:
-                print("✅ Hassfest validation - PASSED")
-                return True
-            else:
-                print(f"   Image {image} failed, trying next...")
-                continue
-
-        except subprocess.TimeoutExpired:
-            print(f"   Image {image} timed out, trying next...")
-            continue
-        except Exception as e:
-            print(f"   Image {image} error: {e}, trying next...")
-            continue
-
-    # If all images failed, provide instructions
-    print("⚠️ Hassfest validation - SKIPPED")
-    print("   Could not run Hassfest locally with Docker")
-    print("   This validation will run in GitHub Actions")
-    return True  # Don't fail if we can't run Hassfest locally
 
 
 def validate_manifest():
@@ -245,43 +107,45 @@ def main():
 
     validation_results = []
 
+    # Install test dependencies first (like GitHub Actions)
+    print("📦 Installing test dependencies...")
+    install_result = run_command(
+        "pip install -r tests/requirements.txt",
+        "Install test dependencies"
+    )
+    validation_results.append(install_result)
+
     # 1. Validate manifest
     validation_results.append(validate_manifest())
 
     # 2. Validate services
     validation_results.append(validate_services())
 
-    # 3. HACS validation (requires Docker)
-    validation_results.append(validate_hacs())
-
-    # 4. Hassfest validation (requires Docker)
-    validation_results.append(validate_hassfest())
-
-    # 5. Code formatting with Black
+    # 3. Code formatting with Black (match GitHub Actions exactly)
     validation_results.append(run_command(
-        "black --check --diff custom_components/",
+        "python -m black --check --diff custom_components/",
         "Black code formatting"
     ))
 
-    # 6. Import sorting with isort
+    # 4. Import sorting with isort (match GitHub Actions exactly)
     validation_results.append(run_command(
-        "isort --check-only --diff custom_components/",
+        "python -m isort --check-only --diff custom_components/",
         "isort import sorting"
     ))
 
-    # 7. Linting with flake8
+    # 5. Linting with flake8 (match GitHub Actions exactly)
     validation_results.append(run_command(
-        "flake8 custom_components/ --max-line-length=100 --ignore=E203,W503",
+        "python -m flake8 custom_components/ --max-line-length=100 --ignore=E203,W503",
         "flake8 linting"
     ))
 
-    # 8. Security scan with Bandit
+    # 6. Security scan with Bandit (run headless)
     validation_results.append(run_command(
-        "bandit -r custom_components/ -f json -o bandit-report.json",
+        "bandit -r custom_components/ -f json -o bandit-report.json --no-browser",
         "Bandit security scan"
     ))
 
-    # 9. Type checking with mypy
+    # 7. Type checking with mypy (match GitHub Actions exactly)
     validation_results.append(run_command(
         "python -m mypy custom_components/ --ignore-missing-imports --no-strict-optional",
         "mypy type checking"

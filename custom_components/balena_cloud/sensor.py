@@ -1,50 +1,28 @@
-"""Support for Balena Cloud sensors."""
+"""Sensor platform for Balena Cloud integration."""
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
-from typing import Any, Optional
+from typing import Any
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
+                                             SensorEntityDescription,
+                                             SensorStateClass)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfInformation
+from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    ATTR_CPU_USAGE,
-    ATTR_DEVICE_NAME,
-    ATTR_DEVICE_TYPE,
-    ATTR_DEVICE_UUID,
-    ATTR_FLEET_NAME,
-    ATTR_IP_ADDRESS,
-    ATTR_LAST_SEEN,
-    ATTR_MAC_ADDRESS,
-    ATTR_MEMORY_TOTAL,
-    ATTR_MEMORY_USAGE,
-    ATTR_OS_VERSION,
-    ATTR_STORAGE_TOTAL,
-    ATTR_STORAGE_USAGE,
-    ATTR_SUPERVISOR_VERSION,
-    ATTR_TEMPERATURE,
-    DOMAIN,
-    ICON_CPU,
-    ICON_DEVICE,
-    ICON_MEMORY,
-    ICON_STORAGE,
-    ICON_TEMPERATURE,
-    UNIT_CELSIUS,
-    UNIT_PERCENTAGE,
-)
+from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
+                    ATTR_FLEET_NAME, ATTR_IP_ADDRESS, ATTR_LAST_SEEN,
+                    ATTR_MAC_ADDRESS, ATTR_MEMORY_TOTAL, ATTR_MEMORY_USAGE,
+                    ATTR_OS_VERSION, ATTR_STORAGE_TOTAL, ATTR_STORAGE_USAGE,
+                    ATTR_SUPERVISOR_VERSION, DOMAIN, ICON_CPU, ICON_MEMORY,
+                    ICON_STORAGE, ICON_TEMPERATURE, UNIT_CELSIUS)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
 

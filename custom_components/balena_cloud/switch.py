@@ -12,13 +12,8 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    ATTR_DEVICE_NAME,
-    ATTR_DEVICE_TYPE,
-    ATTR_DEVICE_UUID,
-    ATTR_FLEET_NAME,
-    DOMAIN,
-)
+from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
+                    ATTR_FLEET_NAME, DOMAIN)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
 
@@ -30,21 +25,22 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Balena Cloud switches from a config entry."""
-    coordinator: BalenaCloudDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.entry_id
-    ]
+    """Set up Balena Cloud switch platform."""
+    # For now, we don't have any switch entities
+    # This platform is prepared for future switch-like entities
+    # such as device power management, development mode toggles, etc.
 
-    # For now, we don't have any switches to create
-    # This platform is prepared for future use when we add toggleable features
-    entities: list[BalenaCloudSwitchEntity] = []
+    # Example: Device power switch entities could be added here
+    # coordinator: BalenaCloudDataUpdateCoordinator = hass.data[DOMAIN][
+    #     config_entry.entry_id
+    # ]
+    # switches = []
+    # for device_uuid, device in coordinator.devices.items():
+    #     switches.append(BalenaCloudDevicePowerSwitch(coordinator, device_uuid))
+    # async_add_entities(switches)
 
-    # Example of future switch types:
-    # - Maintenance mode toggle
-    # - Service enable/disable switches
-    # - Remote access toggle
-
-    async_add_entities(entities)
+    # Currently no switch entities to add
+    async_add_entities([])
 
 
 class BalenaCloudSwitchEntity(

@@ -4,20 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 from functools import wraps
+from typing import Any, Dict, List, Optional
 
-from balena import Balena, exceptions as balena_exceptions
+from balena import Balena
+from balena import exceptions as balena_exceptions
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import (
-    ERROR_AUTH_FAILED,
-    ERROR_NETWORK_ERROR,
-    ERROR_RATE_LIMITED,
-    MAX_RETRIES,
-    RETRY_DELAY,
-)
+from .const import (ERROR_AUTH_FAILED, ERROR_NETWORK_ERROR, MAX_RETRIES,
+                    RETRY_DELAY)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +41,7 @@ def async_retry(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
                     return await func(*args, **kwargs)
                 except (
                     balena_exceptions.RequestError,
-                    balena_exceptions.BalenaError,
+                    balena_exceptions.BalenaException,
                 ) as err:
                     last_exception = err
                     if attempt < max_retries:
@@ -99,7 +94,11 @@ class BalenaCloudAPIClient:
         try:
             user_info = await self._run_in_executor(self._balena.auth.get_user_info)
             return user_info
-        except balena_exceptions.InvalidToken as err:
+        except (
+            balena_exceptions.MalformedToken,
+            balena_exceptions.NotLoggedIn,
+            balena_exceptions.Unauthorized,
+        ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to get user info: %s", err)
@@ -113,7 +112,11 @@ class BalenaCloudAPIClient:
                 self._balena.models.application.get_all
             )
             return applications
-        except balena_exceptions.InvalidToken as err:
+        except (
+            balena_exceptions.MalformedToken,
+            balena_exceptions.NotLoggedIn,
+            balena_exceptions.Unauthorized,
+        ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to get fleets: %s", err)
@@ -130,7 +133,11 @@ class BalenaCloudAPIClient:
         except balena_exceptions.ApplicationNotFound:
             _LOGGER.warning("Fleet with ID %s not found", fleet_id)
             return {}
-        except balena_exceptions.InvalidToken as err:
+        except (
+            balena_exceptions.MalformedToken,
+            balena_exceptions.NotLoggedIn,
+            balena_exceptions.Unauthorized,
+        ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to get fleet %s: %s", fleet_id, err)
@@ -154,7 +161,11 @@ class BalenaCloudAPIClient:
         except balena_exceptions.ApplicationNotFound:
             _LOGGER.warning("Fleet with ID %s not found", fleet_id)
             return []
-        except balena_exceptions.InvalidToken as err:
+        except (
+            balena_exceptions.MalformedToken,
+            balena_exceptions.NotLoggedIn,
+            balena_exceptions.Unauthorized,
+        ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to get devices: %s", err)
@@ -171,7 +182,11 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return {}
-        except balena_exceptions.InvalidToken as err:
+        except (
+            balena_exceptions.MalformedToken,
+            balena_exceptions.NotLoggedIn,
+            balena_exceptions.Unauthorized,
+        ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to get device %s: %s", device_uuid, err)

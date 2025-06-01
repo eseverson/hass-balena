@@ -7,17 +7,12 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
+                                                      UpdateFailed)
 
 from .api import BalenaCloudAPIClient, BalenaCloudAPIError
-from .const import (
-    CONF_API_TOKEN,
-    CONF_FLEETS,
-    CONF_INCLUDE_OFFLINE_DEVICES,
-    CONF_UPDATE_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
-    DOMAIN,
-)
+from .const import (CONF_API_TOKEN, CONF_FLEETS, CONF_INCLUDE_OFFLINE_DEVICES,
+                    CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN)
 from .models import BalenaDevice, BalenaFleet
 
 _LOGGER = logging.getLogger(__name__)

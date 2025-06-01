@@ -1,7 +1,5 @@
 """Config flow for Balena Cloud integration."""
 
-# mypy: ignore-errors
-
 from __future__ import annotations
 
 import logging
@@ -9,36 +7,22 @@ from typing import Any, Dict, Optional
 
 import voluptuous as vol
 from homeassistant import config_entries, core, exceptions
-from homeassistant.const import CONF_NAME
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.const import CONF_API_TOKEN
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import (
-    BalenaCloudAPIClient,
-    BalenaCloudAPIError,
-    BalenaCloudAuthenticationError,
-)
-from .const import (
-    CONF_API_TOKEN,
-    CONF_FLEETS,
-    CONF_INCLUDE_OFFLINE_DEVICES,
-    CONF_UPDATE_INTERVAL,
-    DEFAULT_INCLUDE_OFFLINE_DEVICES,
-    DEFAULT_UPDATE_INTERVAL,
-    DOMAIN,
-    ERROR_AUTH_FAILED,
-    ERROR_INVALID_TOKEN,
-)
+from .api import (BalenaCloudAPIClient, BalenaCloudAPIError,
+                  BalenaCloudAuthenticationError)
+from .const import (CONF_FLEETS, CONF_INCLUDE_OFFLINE_DEVICES,
+                    CONF_UPDATE_INTERVAL, DEFAULT_INCLUDE_OFFLINE_DEVICES,
+                    DEFAULT_UPDATE_INTERVAL, DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 
-# Error message mappings for tests
 ERRORS = {
-    "invalid_auth": "Invalid authentication credentials",
+    "invalid_auth": "Invalid authentication",
     "cannot_connect": "Cannot connect to Balena Cloud",
-    "unknown": "Unknown error occurred",
-    "no_fleets": "No fleets found for this account",
+    "unknown": "Unexpected error occurred",
+    "no_fleets": "No fleets found or accessible with this token",
 }
 
 
@@ -50,6 +34,7 @@ class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is invalid auth."""
 
 
+@config_entries.HANDLERS.register(DOMAIN)
 class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Balena Cloud."""
 
@@ -57,13 +42,13 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self.api_token: Optional[str] = None
+        self.api_token: str | None = None
         self.fleets: Dict[int, str] = {}
         self.user_info: Dict[str, Any] = {}
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
         errors: Dict[str, str] = {}
 
@@ -102,7 +87,7 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_fleets(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Handle fleet selection step."""
         errors: Dict[str, str] = {}
 
@@ -223,7 +208,7 @@ class BalenaCloudOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
+    ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

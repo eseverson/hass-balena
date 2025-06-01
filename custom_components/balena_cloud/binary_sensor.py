@@ -2,36 +2,23 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-    BinarySensorEntityDescription,
-)
+    BinarySensorDeviceClass, BinarySensorEntity, BinarySensorEntityDescription)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    ATTR_DEVICE_NAME,
-    ATTR_DEVICE_TYPE,
-    ATTR_DEVICE_UUID,
-    ATTR_FLEET_NAME,
-    ATTR_IP_ADDRESS,
-    ATTR_LAST_SEEN,
-    ATTR_MAC_ADDRESS,
-    ATTR_OS_VERSION,
-    ATTR_SUPERVISOR_VERSION,
-    DOMAIN,
-    ICON_OFFLINE,
-    ICON_ONLINE,
-)
+from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
+                    ATTR_FLEET_NAME, ATTR_IP_ADDRESS, ATTR_LAST_SEEN,
+                    ATTR_MAC_ADDRESS, ATTR_OS_VERSION, ATTR_SUPERVISOR_VERSION,
+                    DOMAIN, ICON_OFFLINE, ICON_ONLINE)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
 

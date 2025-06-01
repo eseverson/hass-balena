@@ -2,27 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Any
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.components.button import (ButtonEntity,
+                                             ButtonEntityDescription)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    ATTR_DEVICE_NAME,
-    ATTR_DEVICE_TYPE,
-    ATTR_DEVICE_UUID,
-    ATTR_FLEET_NAME,
-    DOMAIN,
-    ICON_REBOOT,
-    ICON_RESTART,
-)
+from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
+                    ATTR_FLEET_NAME, DOMAIN, ICON_REBOOT, ICON_RESTART)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
 

@@ -38,10 +38,12 @@ class TestBalenaCloudAPIClientUnit:
         assert api_client._api_token == "test_token_12345"
         assert api_client._balena is not None
 
+    @pytest.mark.asyncio
     async def test_build_url_method(self, api_client):
         """Test that SDK is properly initialized."""
         assert api_client._balena is not None
 
+    @pytest.mark.asyncio
     async def test_validate_response_method(self, api_client):
         """Test that we can call SDK methods."""
         assert hasattr(api_client, '_run_in_executor')
@@ -321,6 +323,7 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         assert coordinator.api_token == "test_token_12345"
         assert coordinator.selected_fleets == [1001, 1002]
 
+    @pytest.mark.asyncio
     async def test_coordinator_get_device_method(self, mock_coordinator_setup):
         """Test coordinator get_device method."""
         coordinator, _, _ = mock_coordinator_setup
@@ -338,6 +341,7 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         device = coordinator.get_device("non-existent-uuid")
         assert device is None
 
+    @pytest.mark.asyncio
     async def test_coordinator_get_fleet_method(self, mock_coordinator_setup):
         """Test coordinator get_fleet method."""
         coordinator, _, _ = mock_coordinator_setup
@@ -355,6 +359,7 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         fleet = coordinator.get_fleet(9999)
         assert fleet is None
 
+    @pytest.mark.asyncio
     async def test_coordinator_get_devices_by_fleet_method(self, mock_coordinator_setup):
         """Test coordinator get_devices_by_fleet method."""
         coordinator, _, _ = mock_coordinator_setup
@@ -382,6 +387,7 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         fleet_devices = coordinator.get_devices_by_fleet(9999)
         assert len(fleet_devices) == 0
 
+    @pytest.mark.asyncio
     async def test_coordinator_device_control_methods(self, mock_coordinator_setup):
         """Test coordinator device control methods."""
         coordinator, _, _ = mock_coordinator_setup
@@ -391,6 +397,11 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         coordinator.api.async_restart_application.return_value = True
         coordinator.api.async_reboot_device.return_value = True
         coordinator.api.async_update_environment_variables.return_value = True
+
+        # Add a test device to the coordinator (important!)
+        test_device = MagicMock()
+        test_device.uuid = "device-uuid-1"
+        coordinator.devices = {"device-uuid-1": test_device}
 
         # Test restart application
         result = await coordinator.async_restart_application("device-uuid-1", "main")
@@ -426,6 +437,7 @@ class TestConfigurationFlowUnit:
         assert mock_config_flow.VERSION == 1
         assert hasattr(mock_config_flow.__class__, '__config_flow_domain__') or mock_config_flow.__class__.__name__ == 'BalenaCloudConfigFlow'
 
+    @pytest.mark.asyncio
     async def test_config_flow_validate_input_method(self, mock_config_flow):
         """Test config flow input validation method."""
         # Mock API client
@@ -439,22 +451,33 @@ class TestConfigurationFlowUnit:
             result = await mock_config_flow._async_validate_input(user_input)
 
             assert result is None  # No errors
-            assert mock_config_flow.api_token == "valid_token_12345"
+            # Check that the API client was created with the token (stored in flow)
+            mock_api_class.assert_called_once_with("valid_token_12345")
             assert mock_config_flow.user_info == {"username": "test_user"}
 
+    @pytest.mark.asyncio
     async def test_config_flow_fetch_fleets_method(self, mock_config_flow):
         """Test config flow fleet fetching method."""
-        # Mock API client
-        mock_config_flow.api = AsyncMock()
-        mock_config_flow.api.async_get_fleets.return_value = [
-            {"id": 1001, "app_name": "fleet-1"},
-            {"id": 1002, "app_name": "fleet-2"},
-        ]
+        # Set up the API token first
+        mock_config_flow.api_token = "test_token_12345"
 
-        await mock_config_flow._async_fetch_fleets()
+        # Mock the API client constructor and its methods
+        with patch("custom_components.balena_cloud.config_flow.BalenaCloudAPIClient") as mock_api_class:
+            mock_api = AsyncMock()
+            mock_api.async_get_fleets.return_value = [
+                {"id": 1001, "app_name": "fleet-1"},
+                {"id": 1002, "app_name": "fleet-2"},
+            ]
+            mock_api_class.return_value = mock_api
 
-        assert mock_config_flow.fleets == {1001: "fleet-1", 1002: "fleet-2"}
+            await mock_config_flow._async_fetch_fleets()
 
+            # Verify the API client was created with the correct token
+            mock_api_class.assert_called_once_with("test_token_12345")
+            # Verify the fleets were parsed correctly
+            assert mock_config_flow.fleets == {1001: "fleet-1", 1002: "fleet-2"}
+
+    @pytest.mark.asyncio
     async def test_config_flow_user_step_form_validation(self, mock_config_flow):
         """Test config flow user step form validation."""
         # Test empty token
@@ -487,11 +510,12 @@ class TestEntityPlatformsUnit:
 
         return device
 
+    @pytest.mark.asyncio
     async def test_sensor_entity_creation(self, mock_device_with_metrics):
         """Test sensor entity creation and basic properties."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
         coordinator.get_device.return_value = mock_device_with_metrics
 
         # Test CPU sensor
@@ -506,11 +530,12 @@ class TestEntityPlatformsUnit:
         assert sensor.available is True
         assert sensor.unique_id == f"test-device-uuid_{cpu_sensor_desc.key}"
 
+    @pytest.mark.asyncio
     async def test_binary_sensor_entity_creation(self, mock_device_with_metrics):
         """Test binary sensor entity creation and basic properties."""
         from custom_components.balena_cloud.binary_sensor import BalenaCloudBinarySensorEntity, BINARY_SENSOR_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
         coordinator.get_device.return_value = mock_device_with_metrics
 
         # Test online sensor
@@ -525,11 +550,12 @@ class TestEntityPlatformsUnit:
         assert sensor.available is True
         assert sensor.unique_id == f"test-device-uuid_{online_sensor_desc.key}"
 
+    @pytest.mark.asyncio
     async def test_button_entity_creation(self, mock_device_with_metrics):
         """Test button entity creation and basic properties."""
         from custom_components.balena_cloud.button import BalenaCloudButtonEntity, BUTTON_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
         coordinator.get_device.return_value = mock_device_with_metrics
         coordinator.async_restart_application = AsyncMock(return_value=True)
 
@@ -549,11 +575,12 @@ class TestEntityPlatformsUnit:
         await button.async_press()
         coordinator.async_restart_application.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_entity_device_info_creation(self, mock_device_with_metrics):
         """Test entity device info creation."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
         coordinator.get_device.return_value = mock_device_with_metrics
 
         sensor = BalenaCloudSensorEntity(
@@ -569,6 +596,23 @@ class TestEntityPlatformsUnit:
         assert device_info["manufacturer"] == "Balena"
         assert device_info["model"] == "raspberrypi4-64"
         assert DOMAIN in str(device_info["identifiers"])
+
+    @pytest.mark.asyncio
+    async def test_entity_availability_on_errors(self, mock_device_with_metrics):
+        """Test entity availability when errors occur."""
+        from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
+
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
+        coordinator.get_device.return_value = None  # Simulate device not found
+
+        sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=SENSOR_TYPES[0],
+            device_uuid="non-existent-device",
+        )
+
+        # Entity should be unavailable when device is not found
+        assert sensor.available is False
 
 
 class TestUtilityFunctionsUnit:
@@ -631,6 +675,7 @@ class TestUtilityFunctionsUnit:
 class TestErrorHandlingUnit:
     """Unit tests for error handling throughout the integration."""
 
+    @pytest.mark.asyncio
     async def test_api_client_error_handling(self):
         """Test API client error handling."""
         from custom_components.balena_cloud.api import (
@@ -641,6 +686,7 @@ class TestErrorHandlingUnit:
         assert issubclass(BalenaCloudAuthenticationError, BalenaCloudAPIError)
         assert issubclass(BalenaCloudRateLimitError, BalenaCloudAPIError)
 
+    @pytest.mark.asyncio
     async def test_coordinator_error_recovery(self, mock_coordinator_setup):
         """Test coordinator error recovery mechanisms."""
         coordinator, _, _ = mock_coordinator_setup
@@ -653,11 +699,12 @@ class TestErrorHandlingUnit:
         with pytest.raises(Exception):
             await coordinator._async_update_data()
 
+    @pytest.mark.asyncio
     async def test_entity_availability_on_errors(self, mock_device_with_metrics):
         """Test entity availability when errors occur."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
         coordinator.get_device.return_value = None  # Simulate device not found
 
         sensor = BalenaCloudSensorEntity(
@@ -771,6 +818,7 @@ class TestSecurityFeaturesUnit:
         assert api_client._api_token == "test_token"
         assert api_client._balena is not None
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_implementation(self):
         """Test rate limiting implementation."""
         from custom_components.balena_cloud.api import BalenaCloudAPIClient
