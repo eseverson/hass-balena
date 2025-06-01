@@ -41,9 +41,9 @@ jobs:
 
       - name: 📦 Create release archive
         run: |
-          cd custom_components
-          zip -r ../balena_cloud.zip balena_cloud/
-          cd ..
+          cd custom_components/balena_cloud
+          zip -r ../../balena_cloud.zip .
+          cd ../..
 
       - name: 📤 Upload release archive
         env:
