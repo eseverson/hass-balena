@@ -33,10 +33,10 @@ A comprehensive Home Assistant integration for monitoring and managing your Bale
 - `balena_cloud.bulk_reboot` - Bulk reboot devices across fleets
 
 ### 📱 **Entity Types**
-- **Sensors**: CPU percentage, memory percentage, storage percentage, temperature
-- **Binary Sensors**: Device online status, device updating status
-- **Switches**: Public URL toggle (shows current state and URL when enabled)
-- **Buttons**: Quick actions (restart application, reboot device, shutdown device)
+- **Sensors**: CPU percentage, memory percentage, storage percentage, temperature, fleet information, IP address, MAC address
+- **Binary Sensors**: Device connectivity and update status
+- **Switches**: Public URL management and device power control
+- **Buttons**: Quick actions (restart, reboot, shutdown)
 
 ## 📦 Installation
 

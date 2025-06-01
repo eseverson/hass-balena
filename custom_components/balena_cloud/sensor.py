@@ -18,10 +18,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
-                    ATTR_FLEET_NAME, ATTR_IP_ADDRESS, ATTR_LAST_SEEN,
+                    ATTR_FLEET_ID, ATTR_FLEET_NAME, ATTR_IP_ADDRESS, ATTR_LAST_SEEN,
                     ATTR_MAC_ADDRESS, ATTR_MEMORY_TOTAL, ATTR_MEMORY_USAGE,
-                    ATTR_OS_VERSION, ATTR_STORAGE_TOTAL, ATTR_STORAGE_USAGE,
-                    ATTR_SUPERVISOR_VERSION, DOMAIN, ICON_CPU, ICON_MEMORY,
+                    ATTR_OS_VERSION, ATTR_PUBLIC_ADDRESS, ATTR_STORAGE_TOTAL, ATTR_STORAGE_USAGE,
+                    ATTR_SUPERVISOR_VERSION, DOMAIN, ICON_CPU, ICON_FLEET, ICON_IP_ADDRESS,
+                    ICON_LOCATION, ICON_MAC_ADDRESS, ICON_MEMORY,
                     ICON_STORAGE, ICON_TEMPERATURE, UNIT_CELSIUS)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
@@ -98,6 +99,32 @@ SENSOR_TYPES: tuple[BalenaCloudSensorEntityDescription, ...] = (
         value_fn=lambda device: (
             device.metrics.temperature_rounded if device.metrics else None
         ),
+    ),
+    BalenaCloudSensorEntityDescription(
+        key="fleet_name",
+        name="Fleet",
+        icon=ICON_FLEET,
+        value_fn=lambda device: device.fleet_name,
+        attr_fn=lambda device: {
+            ATTR_FLEET_ID: device.fleet_id,
+            ATTR_FLEET_NAME: device.fleet_name,
+        },
+    ),
+    BalenaCloudSensorEntityDescription(
+        key="ip_address",
+        name="IP Address",
+        icon=ICON_IP_ADDRESS,
+        value_fn=lambda device: device.ip_address,
+        attr_fn=lambda device: {
+            ATTR_IP_ADDRESS: device.ip_address,
+            ATTR_PUBLIC_ADDRESS: device.public_address,
+        },
+    ),
+    BalenaCloudSensorEntityDescription(
+        key="mac_address",
+        name="MAC Address",
+        icon=ICON_MAC_ADDRESS,
+        value_fn=lambda device: device.mac_address,
     ),
 )
 
@@ -180,10 +207,12 @@ class BalenaCloudSensorEntity(
             ATTR_DEVICE_UUID: self.device.uuid,
             ATTR_DEVICE_NAME: self.device.device_name,
             ATTR_DEVICE_TYPE: self.device.device_type,
+            ATTR_FLEET_ID: self.device.fleet_id,
             ATTR_FLEET_NAME: self.device.fleet_name,
             ATTR_OS_VERSION: self.device.os_version,
             ATTR_SUPERVISOR_VERSION: self.device.supervisor_version,
             ATTR_IP_ADDRESS: self.device.ip_address,
+            ATTR_PUBLIC_ADDRESS: self.device.public_address,
             ATTR_MAC_ADDRESS: self.device.mac_address,
             ATTR_LAST_SEEN: (
                 self.device.last_seen.isoformat() if self.device.last_seen else None

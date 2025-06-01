@@ -614,6 +614,57 @@ class TestEntityPlatformsUnit:
         # Entity should be unavailable when device is not found
         assert sensor.available is False
 
+    @pytest.mark.asyncio
+    async def test_fleet_and_location_sensors(self, mock_device_with_metrics):
+        """Test new fleet and location sensor functionality."""
+        from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
+
+        # Set up device with fleet and location info
+        mock_device_with_metrics.fleet_id = 1001
+        mock_device_with_metrics.fleet_name = "test-fleet-production"
+        mock_device_with_metrics.ip_address = "192.168.1.100"
+        mock_device_with_metrics.public_address = "203.0.113.1"
+        mock_device_with_metrics.mac_address = "b8:27:eb:12:34:56"
+
+        coordinator = MagicMock()
+        coordinator.get_device.return_value = mock_device_with_metrics
+
+        # Test fleet sensor
+        fleet_sensor_desc = next(s for s in SENSOR_TYPES if s.key == "fleet_name")
+        fleet_sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=fleet_sensor_desc,
+            device_uuid="test-device-uuid",
+        )
+
+        assert fleet_sensor.native_value == "test-fleet-production"
+        attributes = fleet_sensor.extra_state_attributes
+        assert attributes["fleet_id"] == 1001
+        assert attributes["fleet_name"] == "test-fleet-production"
+
+        # Test IP address sensor
+        ip_sensor_desc = next(s for s in SENSOR_TYPES if s.key == "ip_address")
+        ip_sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=ip_sensor_desc,
+            device_uuid="test-device-uuid",
+        )
+
+        assert ip_sensor.native_value == "192.168.1.100"
+        ip_attributes = ip_sensor.extra_state_attributes
+        assert ip_attributes["ip_address"] == "192.168.1.100"
+        assert ip_attributes["public_address"] == "203.0.113.1"
+
+        # Test MAC address sensor
+        mac_sensor_desc = next(s for s in SENSOR_TYPES if s.key == "mac_address")
+        mac_sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=mac_sensor_desc,
+            device_uuid="test-device-uuid",
+        )
+
+        assert mac_sensor.native_value == "b8:27:eb:12:34:56"
+
 
 class TestUtilityFunctionsUnit:
     """Unit tests for utility functions."""
