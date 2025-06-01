@@ -1,4 +1,5 @@
 """Support for Balena Cloud sensors."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -101,8 +102,12 @@ SENSOR_TYPES: tuple[BalenaCloudSensorEntityDescription, ...] = (
             device.metrics.storage_percentage if device.metrics else None
         ),
         attr_fn=lambda device: {
-            ATTR_STORAGE_USAGE: device.metrics.storage_usage if device.metrics else None,
-            ATTR_STORAGE_TOTAL: device.metrics.storage_total if device.metrics else None,
+            ATTR_STORAGE_USAGE: (
+                device.metrics.storage_usage if device.metrics else None
+            ),
+            ATTR_STORAGE_TOTAL: (
+                device.metrics.storage_total if device.metrics else None
+            ),
         },
     ),
     BalenaCloudSensorEntityDescription(
@@ -202,7 +207,9 @@ class BalenaCloudSensorEntity(
             ATTR_SUPERVISOR_VERSION: self.device.supervisor_version,
             ATTR_IP_ADDRESS: self.device.ip_address,
             ATTR_MAC_ADDRESS: self.device.mac_address,
-            ATTR_LAST_SEEN: self.device.last_seen.isoformat() if self.device.last_seen else None,
+            ATTR_LAST_SEEN: (
+                self.device.last_seen.isoformat() if self.device.last_seen else None
+            ),
         }
 
         # Add sensor-specific attributes

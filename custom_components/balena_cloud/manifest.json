@@ -7,7 +7,6 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/eseverson/hass-balena",
-  "icon": "https://raw.githubusercontent.com/eseverson/hass-balena/main/icon.png",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/eseverson/hass-balena/issues",

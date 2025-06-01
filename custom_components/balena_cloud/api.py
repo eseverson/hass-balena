@@ -1,4 +1,5 @@
 """Balena Cloud API client using balena-sdk."""
+
 from __future__ import annotations
 
 import asyncio
@@ -35,6 +36,7 @@ class BalenaCloudRateLimitError(BalenaCloudAPIError):
 
 def async_retry(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
     """Decorator to add retry logic to async methods."""
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -42,25 +44,36 @@ def async_retry(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
             for attempt in range(max_retries + 1):
                 try:
                     return await func(*args, **kwargs)
-                except (balena_exceptions.RequestError, balena_exceptions.BalenaError) as err:
+                except (
+                    balena_exceptions.RequestError,
+                    balena_exceptions.BalenaError,
+                ) as err:
                     last_exception = err
                     if attempt < max_retries:
-                        wait_time = delay * (2 ** attempt)
+                        wait_time = delay * (2**attempt)
                         _LOGGER.warning(
                             "Attempt %d failed for %s, retrying in %s seconds: %s",
-                            attempt + 1, func.__name__, wait_time, err
+                            attempt + 1,
+                            func.__name__,
+                            wait_time,
+                            err,
                         )
                         await asyncio.sleep(wait_time)
                     else:
                         _LOGGER.error(
                             "All %d attempts failed for %s: %s",
-                            max_retries + 1, func.__name__, err
+                            max_retries + 1,
+                            func.__name__,
+                            err,
                         )
 
             if last_exception:
-                raise BalenaCloudAPIError(f"Failed after {max_retries + 1} attempts") from last_exception
+                raise BalenaCloudAPIError(
+                    f"Failed after {max_retries + 1} attempts"
+                ) from last_exception
 
         return wrapper
+
     return decorator
 
 
@@ -96,7 +109,9 @@ class BalenaCloudAPIClient:
     async def async_get_fleets(self) -> List[Dict[str, Any]]:
         """Get all accessible fleets (applications)."""
         try:
-            applications = await self._run_in_executor(self._balena.models.application.get_all)
+            applications = await self._run_in_executor(
+                self._balena.models.application.get_all
+            )
             return applications
         except balena_exceptions.InvalidToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
@@ -211,7 +226,9 @@ class BalenaCloudAPIClient:
             _LOGGER.debug("Failed to get device metrics for %s: %s", device_uuid, err)
             return {}
 
-    async def _async_get_device_services(self, device_uuid: str) -> List[Dict[str, Any]]:
+    async def _async_get_device_services(
+        self, device_uuid: str
+    ) -> List[Dict[str, Any]]:
         """Get services running on a device."""
         try:
             services = await self._run_in_executor(
@@ -233,13 +250,12 @@ class BalenaCloudAPIClient:
                 await self._run_in_executor(
                     self._balena.models.device.restart_service,
                     device_uuid,
-                    service_name
+                    service_name,
                 )
             else:
                 # Restart all services
                 await self._run_in_executor(
-                    self._balena.models.device.restart_application,
-                    device_uuid
+                    self._balena.models.device.restart_application, device_uuid
                 )
             return True
         except balena_exceptions.DeviceNotFound:
@@ -255,9 +271,7 @@ class BalenaCloudAPIClient:
     async def async_reboot_device(self, device_uuid: str) -> bool:
         """Reboot a device."""
         try:
-            await self._run_in_executor(
-                self._balena.models.device.reboot, device_uuid
-            )
+            await self._run_in_executor(self._balena.models.device.reboot, device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -292,8 +306,7 @@ class BalenaCloudAPIClient:
         """Get environment variables for a device."""
         try:
             env_vars = await self._run_in_executor(
-                self._balena.models.environment_variables.device.get_all,
-                device_uuid
+                self._balena.models.environment_variables.device.get_all, device_uuid
             )
             return env_vars
         except balena_exceptions.DeviceNotFound:
@@ -302,7 +315,9 @@ class BalenaCloudAPIClient:
         except balena_exceptions.InvalidToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
-            _LOGGER.error("Failed to get environment variables for %s: %s", device_uuid, err)
+            _LOGGER.error(
+                "Failed to get environment variables for %s: %s", device_uuid, err
+            )
             return []
 
     @async_retry()
@@ -315,7 +330,7 @@ class BalenaCloudAPIClient:
                 self._balena.models.environment_variables.device.create,
                 device_uuid,
                 name,
-                value
+                value,
             )
             return True
         except balena_exceptions.DeviceNotFound:
@@ -324,7 +339,9 @@ class BalenaCloudAPIClient:
         except balena_exceptions.InvalidToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
-            _LOGGER.error("Failed to set environment variable for %s: %s", device_uuid, err)
+            _LOGGER.error(
+                "Failed to set environment variable for %s: %s", device_uuid, err
+            )
             return False
 
     @async_retry()
@@ -334,7 +351,9 @@ class BalenaCloudAPIClient:
         """Update environment variables for a device."""
         try:
             # Get existing environment variables
-            existing_vars = await self.async_get_device_environment_variables(device_uuid)
+            existing_vars = await self.async_get_device_environment_variables(
+                device_uuid
+            )
             existing_dict = {var["name"]: var for var in existing_vars}
 
             success = True
@@ -346,7 +365,7 @@ class BalenaCloudAPIClient:
                         await self._run_in_executor(
                             self._balena.models.environment_variables.device.update,
                             var_id,
-                            value
+                            value,
                         )
                     else:
                         # Create new variable
@@ -354,7 +373,7 @@ class BalenaCloudAPIClient:
                             self._balena.models.environment_variables.device.create,
                             device_uuid,
                             name,
-                            value
+                            value,
                         )
                 except Exception as var_err:
                     _LOGGER.error("Failed to update variable %s: %s", name, var_err)
@@ -384,8 +403,7 @@ class BalenaCloudAPIClient:
         """Enable public device URL."""
         try:
             await self._run_in_executor(
-                self._balena.models.device.enable_device_url,
-                device_uuid
+                self._balena.models.device.enable_device_url, device_uuid
             )
             return True
         except balena_exceptions.DeviceNotFound:
@@ -402,8 +420,7 @@ class BalenaCloudAPIClient:
         """Disable public device URL."""
         try:
             await self._run_in_executor(
-                self._balena.models.device.disable_device_url,
-                device_uuid
+                self._balena.models.device.disable_device_url, device_uuid
             )
             return True
         except balena_exceptions.DeviceNotFound:
@@ -420,8 +437,7 @@ class BalenaCloudAPIClient:
         """Get the public device URL."""
         try:
             url = await self._run_in_executor(
-                self._balena.models.device.get_device_url,
-                device_uuid
+                self._balena.models.device.get_device_url, device_uuid
             )
             return url
         except balena_exceptions.DeviceNotFound:

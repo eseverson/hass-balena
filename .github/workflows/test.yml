@@ -80,7 +80,8 @@ jobs:
       - name: 🔍 Run Bandit security scan
         uses: tj-actions/bandit@v5.5
         with:
-          options: "-r custom_components/ -f json -o bandit-report.json"
+          targets: "custom_components/"
+          options: "-f json -o bandit-report.json"
 
       - name: 📊 Upload security scan results
         if: always()

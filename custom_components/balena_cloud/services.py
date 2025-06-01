@@ -1,4 +1,5 @@
 """Service handlers for Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -22,47 +23,61 @@ from .coordinator import BalenaCloudDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 # Service schemas
-RESTART_APPLICATION_SCHEMA = vol.Schema({
-    vol.Required("device_uuid"): cv.string,
-    vol.Optional("service_name"): cv.string,
-    vol.Optional("confirm", default=False): bool,
-})
+RESTART_APPLICATION_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_uuid"): cv.string,
+        vol.Optional("service_name"): cv.string,
+        vol.Optional("confirm", default=False): bool,
+    }
+)
 
-REBOOT_DEVICE_SCHEMA = vol.Schema({
-    vol.Required("device_uuid"): cv.string,
-    vol.Optional("confirm", default=False): bool,
-    vol.Optional("force", default=False): bool,
-})
+REBOOT_DEVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_uuid"): cv.string,
+        vol.Optional("confirm", default=False): bool,
+        vol.Optional("force", default=False): bool,
+    }
+)
 
-SHUTDOWN_DEVICE_SCHEMA = vol.Schema({
-    vol.Required("device_uuid"): cv.string,
-    vol.Optional("confirm", default=False): bool,
-    vol.Optional("force", default=False): bool,
-})
+SHUTDOWN_DEVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_uuid"): cv.string,
+        vol.Optional("confirm", default=False): bool,
+        vol.Optional("force", default=False): bool,
+    }
+)
 
-UPDATE_ENVIRONMENT_SCHEMA = vol.Schema({
-    vol.Required("device_uuid"): cv.string,
-    vol.Required("variables"): dict,
-    vol.Optional("merge", default=True): bool,
-})
+UPDATE_ENVIRONMENT_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_uuid"): cv.string,
+        vol.Required("variables"): dict,
+        vol.Optional("merge", default=True): bool,
+    }
+)
 
-DEVICE_URL_SCHEMA = vol.Schema({
-    vol.Required("device_uuid"): cv.string,
-})
+DEVICE_URL_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_uuid"): cv.string,
+    }
+)
 
-BULK_RESTART_SCHEMA = vol.Schema({
-    vol.Optional("device_uuids"): [cv.string],
-    vol.Optional("fleet_id"): cv.positive_int,
-    vol.Optional("service_name"): cv.string,
-    vol.Optional("confirm", default=False): bool,
-})
+BULK_RESTART_SCHEMA = vol.Schema(
+    {
+        vol.Optional("device_uuids"): [cv.string],
+        vol.Optional("fleet_id"): cv.positive_int,
+        vol.Optional("service_name"): cv.string,
+        vol.Optional("confirm", default=False): bool,
+    }
+)
 
-BULK_REBOOT_SCHEMA = vol.Schema({
-    vol.Optional("device_uuids"): [cv.string],
-    vol.Optional("fleet_id"): cv.positive_int,
-    vol.Optional("confirm", default=False): bool,
-    vol.Optional("force", default=False): bool,
-})
+BULK_REBOOT_SCHEMA = vol.Schema(
+    {
+        vol.Optional("device_uuids"): [cv.string],
+        vol.Optional("fleet_id"): cv.positive_int,
+        vol.Optional("confirm", default=False): bool,
+        vol.Optional("force", default=False): bool,
+    }
+)
 
 
 class BalenaCloudServiceHandler:
@@ -156,20 +171,24 @@ class BalenaCloudServiceHandler:
             DOMAIN,
             "restart_fleet",
             self._handle_restart_fleet,
-            schema=vol.Schema({
-                vol.Required("fleet_id"): cv.positive_int,
-                vol.Optional("service_name"): cv.string,
-                vol.Optional("confirm", default=False): bool,
-            }),
+            schema=vol.Schema(
+                {
+                    vol.Required("fleet_id"): cv.positive_int,
+                    vol.Optional("service_name"): cv.string,
+                    vol.Optional("confirm", default=False): bool,
+                }
+            ),
         )
 
         self.hass.services.async_register(
             DOMAIN,
             "get_fleet_health",
             self._handle_get_fleet_health,
-            schema=vol.Schema({
-                vol.Required("fleet_id"): cv.positive_int,
-            }),
+            schema=vol.Schema(
+                {
+                    vol.Required("fleet_id"): cv.positive_int,
+                }
+            ),
         )
 
         _LOGGER.info("Balena Cloud services registered")
@@ -196,7 +215,9 @@ class BalenaCloudServiceHandler:
 
         _LOGGER.info("Balena Cloud services removed")
 
-    def _get_coordinator_for_device(self, device_uuid: str) -> Optional[BalenaCloudDataUpdateCoordinator]:
+    def _get_coordinator_for_device(
+        self, device_uuid: str
+    ) -> Optional[BalenaCloudDataUpdateCoordinator]:
         """Find coordinator that manages the specified device."""
         for coordinator in self._coordinators.values():
             if device_uuid in coordinator.devices:
@@ -238,7 +259,9 @@ class BalenaCloudServiceHandler:
 
         success = await coordinator.async_restart_application(device_uuid, service_name)
         if success:
-            _LOGGER.info("Successfully restarted application on %s", device.display_name)
+            _LOGGER.info(
+                "Successfully restarted application on %s", device.display_name
+            )
         else:
             _LOGGER.error("Failed to restart application on %s", device.display_name)
 
@@ -327,7 +350,7 @@ class BalenaCloudServiceHandler:
             _LOGGER.info(
                 "Successfully enabled device URL for %s: %s",
                 device.display_name,
-                url or "URL will be available shortly"
+                url or "URL will be available shortly",
             )
         else:
             _LOGGER.error("Failed to enable device URL for %s", device.display_name)
@@ -378,7 +401,7 @@ class BalenaCloudServiceHandler:
                     "device_uuid": device_uuid,
                     "device_name": device.display_name,
                     "url": url,
-                }
+                },
             )
         else:
             _LOGGER.info("No device URL configured for %s", device.display_name)
@@ -405,11 +428,17 @@ class BalenaCloudServiceHandler:
             "merge" if merge else "replace",
         )
 
-        success = await coordinator.async_update_environment_variables(device_uuid, variables)
+        success = await coordinator.async_update_environment_variables(
+            device_uuid, variables
+        )
         if success:
-            _LOGGER.info("Successfully updated environment variables for %s", device.display_name)
+            _LOGGER.info(
+                "Successfully updated environment variables for %s", device.display_name
+            )
         else:
-            _LOGGER.error("Failed to update environment variables for %s", device.display_name)
+            _LOGGER.error(
+                "Failed to update environment variables for %s", device.display_name
+            )
 
     async def _handle_bulk_restart(self, call: ServiceCall) -> None:
         """Handle bulk restart applications service call."""
@@ -457,13 +486,17 @@ class BalenaCloudServiceHandler:
 
         for coordinator, device in target_devices:
             if device.is_online:
-                success = await coordinator.async_restart_application(device.uuid, service_name)
+                success = await coordinator.async_restart_application(
+                    device.uuid, service_name
+                )
                 if success:
                     successful += 1
                     _LOGGER.debug("Restarted application on %s", device.display_name)
                 else:
                     failed += 1
-                    _LOGGER.warning("Failed to restart application on %s", device.display_name)
+                    _LOGGER.warning(
+                        "Failed to restart application on %s", device.display_name
+                    )
             else:
                 failed += 1
                 _LOGGER.warning("Skipped offline device %s", device.display_name)
@@ -573,7 +606,9 @@ class BalenaCloudServiceHandler:
         failed = 0
 
         for coordinator, device in target_devices:
-            success = await coordinator.async_restart_application(device.uuid, service_name)
+            success = await coordinator.async_restart_application(
+                device.uuid, service_name
+            )
             if success:
                 successful += 1
             else:
@@ -612,13 +647,35 @@ class BalenaCloudServiceHandler:
                 if not device.is_online:
                     device_health = "critical"
                 elif device.metrics:
-                    if (device.metrics.cpu_percentage and device.metrics.cpu_percentage > 90) or \
-                       (device.metrics.memory_percentage and device.metrics.memory_percentage > 90) or \
-                       (device.metrics.storage_percentage and device.metrics.storage_percentage > 95):
+                    if (
+                        (
+                            device.metrics.cpu_percentage
+                            and device.metrics.cpu_percentage > 90
+                        )
+                        or (
+                            device.metrics.memory_percentage
+                            and device.metrics.memory_percentage > 90
+                        )
+                        or (
+                            device.metrics.storage_percentage
+                            and device.metrics.storage_percentage > 95
+                        )
+                    ):
                         device_health = "critical"
-                    elif (device.metrics.cpu_percentage and device.metrics.cpu_percentage > 75) or \
-                         (device.metrics.memory_percentage and device.metrics.memory_percentage > 80) or \
-                         (device.metrics.storage_percentage and device.metrics.storage_percentage > 85):
+                    elif (
+                        (
+                            device.metrics.cpu_percentage
+                            and device.metrics.cpu_percentage > 75
+                        )
+                        or (
+                            device.metrics.memory_percentage
+                            and device.metrics.memory_percentage > 80
+                        )
+                        or (
+                            device.metrics.storage_percentage
+                            and device.metrics.storage_percentage > 85
+                        )
+                    ):
                         device_health = "warning"
 
                 if device_health == "healthy":
@@ -628,13 +685,15 @@ class BalenaCloudServiceHandler:
                 else:
                     health_data["critical_devices"] += 1
 
-                health_data["device_details"].append({
-                    "uuid": device.uuid,
-                    "name": device.display_name,
-                    "health": device_health,
-                    "online": device.is_online,
-                    "status": device.status,
-                })
+                health_data["device_details"].append(
+                    {
+                        "uuid": device.uuid,
+                        "name": device.display_name,
+                        "health": device_health,
+                        "online": device.is_online,
+                        "status": device.status,
+                    }
+                )
 
         # Send response as event
         self.hass.bus.async_fire(

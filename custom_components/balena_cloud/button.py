@@ -1,4 +1,5 @@
 """Support for Balena Cloud buttons."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -138,11 +139,7 @@ class BalenaCloudButtonEntity(
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return (
-            super().available
-            and self.device is not None
-            and self.device.is_online
-        )
+        return super().available and self.device is not None and self.device.is_online
 
     @property
     def name(self) -> str:
@@ -179,9 +176,7 @@ class BalenaCloudButtonEntity(
                     url = await self.coordinator.async_get_device_url(self._device_uuid)
                     if url:
                         _LOGGER.info(
-                            "Device URL for %s: %s",
-                            self.device.display_name,
-                            url
+                            "Device URL for %s: %s", self.device.display_name, url
                         )
             else:
                 _LOGGER.error(

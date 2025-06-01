@@ -1,4 +1,5 @@
 """The Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -79,9 +80,7 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def _async_setup_services(
-    hass: HomeAssistant,
-    entry_id: str,
-    coordinator: BalenaCloudDataUpdateCoordinator
+    hass: HomeAssistant, entry_id: str, coordinator: BalenaCloudDataUpdateCoordinator
 ) -> None:
     """Set up services and advanced components for the integration."""
     # Get the global service handler

@@ -1,4 +1,5 @@
 """Data models for Balena Cloud integration."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -70,14 +71,22 @@ class BalenaDeviceMetrics:
     @property
     def memory_percentage(self) -> Optional[float]:
         """Get memory usage as percentage."""
-        if self.memory_usage is not None and self.memory_total is not None and self.memory_total > 0:
+        if (
+            self.memory_usage is not None
+            and self.memory_total is not None
+            and self.memory_total > 0
+        ):
             return (self.memory_usage / self.memory_total) * 100
         return None
 
     @property
     def storage_percentage(self) -> Optional[float]:
         """Get storage usage as percentage."""
-        if self.storage_usage is not None and self.storage_total is not None and self.storage_total > 0:
+        if (
+            self.storage_usage is not None
+            and self.storage_total is not None
+            and self.storage_total > 0
+        ):
             return (self.storage_usage / self.storage_total) * 100
         return None
 
@@ -115,10 +124,13 @@ class BalenaDevice:
             device_name=data.get("device_name") or data.get("name", ""),
             device_type=data.get("device_type", ""),
             fleet_id=data.get("belongs_to__application", {}).get("__id", 0),
-            fleet_name=fleet_name or data.get("belongs_to__application", {}).get("app_name", ""),
+            fleet_name=fleet_name
+            or data.get("belongs_to__application", {}).get("app_name", ""),
             is_online=data.get("is_online", False),
             status=data.get("status", "offline"),
-            last_connectivity_event=_parse_datetime(data.get("last_connectivity_event")),
+            last_connectivity_event=_parse_datetime(
+                data.get("last_connectivity_event")
+            ),
             last_vpn_event=_parse_datetime(data.get("last_vpn_event")),
             ip_address=data.get("ip_address"),
             mac_address=data.get("mac_address"),
@@ -224,8 +236,16 @@ class BalenaEnvironmentVariable:
         return cls(
             name=data.get("name", ""),
             value=data.get("value", ""),
-            device_uuid=data.get("device", {}).get("uuid") if isinstance(data.get("device"), dict) else data.get("device"),
-            fleet_id=data.get("application", {}).get("__id") if isinstance(data.get("application"), dict) else data.get("application"),
+            device_uuid=(
+                data.get("device", {}).get("uuid")
+                if isinstance(data.get("device"), dict)
+                else data.get("device")
+            ),
+            fleet_id=(
+                data.get("application", {}).get("__id")
+                if isinstance(data.get("application"), dict)
+                else data.get("application")
+            ),
         )
 
 
@@ -236,8 +256,8 @@ def _parse_datetime(date_string: Optional[str]) -> Optional[datetime]:
 
     try:
         # Handle different datetime formats from Balena API
-        if date_string.endswith('Z'):
-            return datetime.fromisoformat(date_string[:-1] + '+00:00')
+        if date_string.endswith("Z"):
+            return datetime.fromisoformat(date_string[:-1] + "+00:00")
         else:
             return datetime.fromisoformat(date_string)
     except (ValueError, TypeError):

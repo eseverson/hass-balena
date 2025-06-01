@@ -1,4 +1,5 @@
 """Fleet overview component for Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -109,7 +110,11 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
             "offline_devices": offline_devices,
             "updating_devices": updating_devices,
             "idle_devices": idle_devices,
-            "online_percentage": round((online_devices / total_devices) * 100, 1) if total_devices > 0 else 0,
+            "online_percentage": (
+                round((online_devices / total_devices) * 100, 1)
+                if total_devices > 0
+                else 0
+            ),
             "average_metrics": average_metrics,
             "health_summary": health_summary,
             "device_types": device_types,
@@ -117,25 +122,51 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
             "last_update": datetime.now().isoformat(),
         }
 
-    def _calculate_average_metrics(self, devices_with_metrics: List[BalenaDevice]) -> Dict[str, Any]:
+    def _calculate_average_metrics(
+        self, devices_with_metrics: List[BalenaDevice]
+    ) -> Dict[str, Any]:
         """Calculate average metrics across fleet devices."""
         if not devices_with_metrics:
             return {}
 
-        cpu_values = [d.metrics.cpu_percentage for d in devices_with_metrics
-                     if d.metrics.cpu_percentage is not None]
-        memory_values = [d.metrics.memory_percentage for d in devices_with_metrics
-                        if d.metrics.memory_percentage is not None]
-        storage_values = [d.metrics.storage_percentage for d in devices_with_metrics
-                         if d.metrics.storage_percentage is not None]
-        temp_values = [d.metrics.temperature for d in devices_with_metrics
-                      if d.metrics.temperature is not None]
+        cpu_values = [
+            d.metrics.cpu_percentage
+            for d in devices_with_metrics
+            if d.metrics.cpu_percentage is not None
+        ]
+        memory_values = [
+            d.metrics.memory_percentage
+            for d in devices_with_metrics
+            if d.metrics.memory_percentage is not None
+        ]
+        storage_values = [
+            d.metrics.storage_percentage
+            for d in devices_with_metrics
+            if d.metrics.storage_percentage is not None
+        ]
+        temp_values = [
+            d.metrics.temperature
+            for d in devices_with_metrics
+            if d.metrics.temperature is not None
+        ]
 
         return {
-            "average_cpu_usage": round(sum(cpu_values) / len(cpu_values), 1) if cpu_values else None,
-            "average_memory_usage": round(sum(memory_values) / len(memory_values), 1) if memory_values else None,
-            "average_storage_usage": round(sum(storage_values) / len(storage_values), 1) if storage_values else None,
-            "average_temperature": round(sum(temp_values) / len(temp_values), 1) if temp_values else None,
+            "average_cpu_usage": (
+                round(sum(cpu_values) / len(cpu_values), 1) if cpu_values else None
+            ),
+            "average_memory_usage": (
+                round(sum(memory_values) / len(memory_values), 1)
+                if memory_values
+                else None
+            ),
+            "average_storage_usage": (
+                round(sum(storage_values) / len(storage_values), 1)
+                if storage_values
+                else None
+            ),
+            "average_temperature": (
+                round(sum(temp_values) / len(temp_values), 1) if temp_values else None
+            ),
             "devices_with_metrics": len(devices_with_metrics),
         }
 
@@ -170,11 +201,17 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
                 healthy_devices += 1
 
         # Fleet-level alerts
-        offline_percentage = (len(devices) - sum(1 for d in devices if d.is_online)) / len(devices) * 100
+        offline_percentage = (
+            (len(devices) - sum(1 for d in devices if d.is_online)) / len(devices) * 100
+        )
         if offline_percentage > 50:
-            fleet_alerts.append(f"High offline rate: {offline_percentage:.1f}% of devices offline")
+            fleet_alerts.append(
+                f"High offline rate: {offline_percentage:.1f}% of devices offline"
+            )
         elif offline_percentage > 25:
-            fleet_alerts.append(f"Elevated offline rate: {offline_percentage:.1f}% of devices offline")
+            fleet_alerts.append(
+                f"Elevated offline rate: {offline_percentage:.1f}% of devices offline"
+            )
 
         if critical_devices > 0:
             fleet_alerts.append(f"{critical_devices} device(s) in critical state")
@@ -218,9 +255,15 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
         # Check warning conditions
         if metrics.cpu_percentage is not None and 80 < metrics.cpu_percentage <= 95:
             warning_conditions.append("cpu")
-        if metrics.memory_percentage is not None and 85 < metrics.memory_percentage <= 95:
+        if (
+            metrics.memory_percentage is not None
+            and 85 < metrics.memory_percentage <= 95
+        ):
             warning_conditions.append("memory")
-        if metrics.storage_percentage is not None and 90 < metrics.storage_percentage <= 98:
+        if (
+            metrics.storage_percentage is not None
+            and 90 < metrics.storage_percentage <= 98
+        ):
             warning_conditions.append("storage")
         if metrics.temperature is not None and 75 < metrics.temperature <= 85:
             warning_conditions.append("temperature")
@@ -238,13 +281,19 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
         attrs = self.fleet_statistics.copy()
 
         if self.fleet:
-            attrs.update({
-                "fleet_id": self.fleet.id,
-                "fleet_name": self.fleet.app_name,
-                "fleet_slug": self.fleet.slug,
-                "device_type": self.fleet.device_type,
-                "created_at": self.fleet.created_at.isoformat() if self.fleet.created_at else None,
-            })
+            attrs.update(
+                {
+                    "fleet_id": self.fleet.id,
+                    "fleet_name": self.fleet.app_name,
+                    "fleet_slug": self.fleet.slug,
+                    "device_type": self.fleet.device_type,
+                    "created_at": (
+                        self.fleet.created_at.isoformat()
+                        if self.fleet.created_at
+                        else None
+                    ),
+                }
+            )
 
         return attrs
 

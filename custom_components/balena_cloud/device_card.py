@@ -1,4 +1,5 @@
 """Device dashboard card component for Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -78,7 +79,9 @@ class BalenaDeviceCard(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
                 "updating": self.device.is_updating,
                 "idle": self.device.is_idle,
                 "status_text": self.device.status,
-                "last_seen": self.device.last_seen.isoformat() if self.device.last_seen else None,
+                "last_seen": (
+                    self.device.last_seen.isoformat() if self.device.last_seen else None
+                ),
             },
             "metrics": {
                 "cpu_usage": metrics.cpu_percentage if metrics else None,

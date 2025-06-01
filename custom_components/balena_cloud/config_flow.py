@@ -1,4 +1,5 @@
 """Config flow for Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -11,7 +12,11 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import BalenaCloudAPIClient, BalenaCloudAPIError, BalenaCloudAuthenticationError
+from .api import (
+    BalenaCloudAPIClient,
+    BalenaCloudAPIError,
+    BalenaCloudAuthenticationError,
+)
 from .const import (
     CONF_API_TOKEN,
     CONF_FLEETS,
@@ -82,9 +87,11 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Show the initial form
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_API_TOKEN): str,
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_TOKEN): str,
+                }
+            ),
             errors=errors,
             description_placeholders={
                 "api_docs_url": "https://www.balena.io/docs/reference/api/overview/",
@@ -133,9 +140,11 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # If no fleets available, show error and go back
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema({
-                    vol.Required(CONF_API_TOKEN): str,
-                }),
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_API_TOKEN): str,
+                    }
+                ),
                 errors={"base": "no_fleets"},
             )
 
@@ -147,12 +156,16 @@ class BalenaCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="fleets",
-            data_schema=vol.Schema({
-                vol.Optional(CONF_FLEETS, default=list(self.fleets.keys())): vol.All(
-                    cv.multi_select(fleet_options),
-                    vol.Length(min=0),
-                ),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_FLEETS, default=list(self.fleets.keys())
+                    ): vol.All(
+                        cv.multi_select(fleet_options),
+                        vol.Length(min=0),
+                    ),
+                }
+            ),
             errors=errors,
             description_placeholders={
                 "fleet_count": str(len(self.fleets)),
@@ -215,18 +228,21 @@ class BalenaCloudOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Optional(
-                    CONF_UPDATE_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
-                    ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
-                vol.Optional(
-                    CONF_INCLUDE_OFFLINE_DEVICES,
-                    default=self.config_entry.options.get(
-                        CONF_INCLUDE_OFFLINE_DEVICES, DEFAULT_INCLUDE_OFFLINE_DEVICES
-                    ),
-                ): bool,
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_UPDATE_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
+                    vol.Optional(
+                        CONF_INCLUDE_OFFLINE_DEVICES,
+                        default=self.config_entry.options.get(
+                            CONF_INCLUDE_OFFLINE_DEVICES,
+                            DEFAULT_INCLUDE_OFFLINE_DEVICES,
+                        ),
+                    ): bool,
+                }
+            ),
         )

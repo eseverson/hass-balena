@@ -1,0 +1,234 @@
+restart_application:
+  name: Restart Application
+  description: Restart application services on a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device to restart
+      required: true
+      selector:
+        text:
+    service_name:
+      name: Service Name
+      description: Name of specific service to restart (optional)
+      required: false
+      selector:
+        text:
+    confirm:
+      name: Confirm Action
+      description: Confirm the restart action
+      required: false
+      default: false
+      selector:
+        boolean:
+
+reboot_device:
+  name: Reboot Device
+  description: Reboot a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device to reboot
+      required: true
+      selector:
+        text:
+    confirm:
+      name: Confirm Action
+      description: Confirm the reboot action
+      required: false
+      default: false
+      selector:
+        boolean:
+    force:
+      name: Force Reboot
+      description: Force the reboot even if device is busy
+      required: false
+      default: false
+      selector:
+        boolean:
+
+shutdown_device:
+  name: Shutdown Device
+  description: Shutdown a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device to shutdown
+      required: true
+      selector:
+        text:
+    confirm:
+      name: Confirm Action
+      description: Confirm the shutdown action
+      required: false
+      default: false
+      selector:
+        boolean:
+    force:
+      name: Force Shutdown
+      description: Force the shutdown even if device is busy
+      required: false
+      default: false
+      selector:
+        boolean:
+
+update_environment:
+  name: Update Environment Variables
+  description: Update environment variables on a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device to update
+      required: true
+      selector:
+        text:
+    variables:
+      name: Variables
+      description: Dictionary of environment variables to set
+      required: true
+      selector:
+        object:
+    merge:
+      name: Merge Variables
+      description: Whether to merge with existing variables or replace
+      required: false
+      default: true
+      selector:
+        boolean:
+
+enable_device_url:
+  name: Enable Device URL
+  description: Enable public device URL for a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device
+      required: true
+      selector:
+        text:
+
+disable_device_url:
+  name: Disable Device URL
+  description: Disable public device URL for a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device
+      required: true
+      selector:
+        text:
+
+get_device_url:
+  name: Get Device URL
+  description: Get the public device URL for a Balena device
+  fields:
+    device_uuid:
+      name: Device UUID
+      description: UUID of the device
+      required: true
+      selector:
+        text:
+
+bulk_restart:
+  name: Bulk Restart Applications
+  description: Restart applications on multiple devices
+  fields:
+    device_uuids:
+      name: Device UUIDs
+      description: List of device UUIDs to restart
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: []
+    fleet_id:
+      name: Fleet ID
+      description: Fleet ID to restart all devices in fleet
+      required: false
+      selector:
+        number:
+          min: 1
+    service_name:
+      name: Service Name
+      description: Name of specific service to restart (optional)
+      required: false
+      selector:
+        text:
+    confirm:
+      name: Confirm Action
+      description: Confirm the bulk restart action
+      required: false
+      default: false
+      selector:
+        boolean:
+
+bulk_reboot:
+  name: Bulk Reboot Devices
+  description: Reboot multiple Balena devices
+  fields:
+    device_uuids:
+      name: Device UUIDs
+      description: List of device UUIDs to reboot
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: []
+    fleet_id:
+      name: Fleet ID
+      description: Fleet ID to reboot all devices in fleet
+      required: false
+      selector:
+        number:
+          min: 1
+    confirm:
+      name: Confirm Action
+      description: Confirm the bulk reboot action
+      required: false
+      default: false
+      selector:
+        boolean:
+    force:
+      name: Force Reboot
+      description: Force the reboot even if devices are busy
+      required: false
+      default: false
+      selector:
+        boolean:
+
+restart_fleet:
+  name: Restart Fleet
+  description: Restart applications on all devices in a fleet
+  fields:
+    fleet_id:
+      name: Fleet ID
+      description: ID of the fleet to restart
+      required: true
+      selector:
+        number:
+          min: 1
+    service_name:
+      name: Service Name
+      description: Name of specific service to restart (optional)
+      required: false
+      selector:
+        text:
+    confirm:
+      name: Confirm Action
+      description: Confirm the fleet restart action
+      required: false
+      default: false
+      selector:
+        boolean:
+
+get_fleet_health:
+  name: Get Fleet Health
+  description: Get health status for all devices in a fleet
+  fields:
+    fleet_id:
+      name: Fleet ID
+      description: ID of the fleet to check
+      required: true
+      selector:
+        number:
+          min: 1

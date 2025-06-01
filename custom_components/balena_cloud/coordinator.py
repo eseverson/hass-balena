@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for Balena Cloud integration."""
+
 from __future__ import annotations
 
 import logging
@@ -34,9 +35,7 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator."""
         self.api_token = config_data[CONF_API_TOKEN]
         self.selected_fleets = config_data.get(CONF_FLEETS, [])
-        self.include_offline_devices = options.get(
-            CONF_INCLUDE_OFFLINE_DEVICES, True
-        )
+        self.include_offline_devices = options.get(CONF_INCLUDE_OFFLINE_DEVICES, True)
 
         # Calculate update interval
         update_interval_seconds = options.get(
@@ -121,7 +120,9 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
             for device_data in all_devices:
                 try:
                     # Get fleet name for the device
-                    fleet_id = device_data.get("belongs_to__application", {}).get("__id")
+                    fleet_id = device_data.get("belongs_to__application", {}).get(
+                        "__id"
+                    )
                     fleet_name = ""
                     if fleet_id and fleet_id in self.fleets:
                         fleet_name = self.fleets[fleet_id].app_name
@@ -134,7 +135,9 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
                     # Get device metrics if available
                     try:
-                        status_data = await self.api.async_get_device_status(device.uuid)
+                        status_data = await self.api.async_get_device_status(
+                            device.uuid
+                        )
                         if "metrics" in status_data and status_data["metrics"]:
                             device.update_metrics(status_data["metrics"])
                     except Exception as metrics_err:
@@ -147,9 +150,7 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     self.devices[device.uuid] = device
 
                 except Exception as device_err:
-                    _LOGGER.warning(
-                        "Failed to process device data: %s", device_err
-                    )
+                    _LOGGER.warning("Failed to process device data: %s", device_err)
                     continue
 
             _LOGGER.debug("Found %d devices", len(self.devices))
