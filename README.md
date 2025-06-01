@@ -131,8 +131,58 @@ pip install -r requirements.txt
 pytest tests/
 ```
 
+### **Local Validation**
 
-## 🤝 Contributing
+We provide two validation scripts to test your changes locally before pushing:
+
+#### Simple Validation (No Docker Required)
+```bash
+python scripts/validate_simple.py
+```
+
+This runs basic validations including:
+- ✅ Manifest validation
+- ✅ HACS configuration validation
+- ✅ Services configuration check
+- ✅ Python syntax validation
+- ✅ Code formatting (Black)
+- ✅ Import sorting (isort)
+- ✅ Linting (flake8)
+- ✅ Security scanning (Bandit)
+
+#### Full Validation (Docker Required)
+```bash
+python scripts/validate_local.py
+```
+
+This includes all simple validations plus:
+- ✅ HACS validation (requires GitHub token)
+- ✅ Hassfest validation
+
+**Prerequisites for full validation:**
+```bash
+# Install Docker
+sudo apt install docker.io
+
+# Set GitHub token for HACS validation
+export GITHUB_TOKEN=your_github_token
+
+# Run validation
+python scripts/validate_local.py
+```
+
+### **Running Tests**
+
+```bash
+# Install test dependencies
+pip install -r tests/requirements.txt
+
+# Run comprehensive test suite
+cd tests
+python test_runner.py
+```
+
+### **Contributing**
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
