@@ -29,14 +29,14 @@ from .models import BalenaDevice
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalenaCloudButtonEntityDescriptionMixin:
     """Mixin for required keys."""
 
     action_fn: Callable[[BalenaCloudDataUpdateCoordinator, str], Any]
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalenaCloudButtonEntityDescription(
     ButtonEntityDescription, BalenaCloudButtonEntityDescriptionMixin
 ):

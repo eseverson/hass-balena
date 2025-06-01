@@ -38,14 +38,14 @@ from .models import BalenaDevice
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalenaCloudBinarySensorEntityDescriptionMixin:
     """Mixin for required keys."""
 
     value_fn: Callable[[BalenaDevice], bool | None]
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalenaCloudBinarySensorEntityDescription(
     BinarySensorEntityDescription, BalenaCloudBinarySensorEntityDescriptionMixin
 ):

@@ -33,8 +33,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create the coordinator for API communication using balena-sdk
     coordinator = BalenaCloudDataUpdateCoordinator(
         hass,
-        entry.data,
-        entry.options,
+        dict(entry.data),
+        dict(entry.options),
     )
 
     # Perform initial data fetch

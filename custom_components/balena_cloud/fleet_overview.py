@@ -86,13 +86,13 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
         idle_devices = sum(1 for d in devices if d.is_idle)
 
         # Device type distribution
-        device_types = {}
+        device_types: dict[str, int] = {}
         for device in devices:
             device_type = device.device_type
             device_types[device_type] = device_types.get(device_type, 0) + 1
 
         # Status distribution
-        status_distribution = {}
+        status_distribution: dict[str, int] = {}
         for device in devices:
             status = device.status
             status_distribution[status] = status_distribution.get(status, 0) + 1
@@ -132,22 +132,22 @@ class BalenaFleetOverview(CoordinatorEntity[BalenaCloudDataUpdateCoordinator]):
         cpu_values = [
             d.metrics.cpu_percentage
             for d in devices_with_metrics
-            if d.metrics.cpu_percentage is not None
+            if d.metrics and d.metrics.cpu_percentage is not None
         ]
         memory_values = [
             d.metrics.memory_percentage
             for d in devices_with_metrics
-            if d.metrics.memory_percentage is not None
+            if d.metrics and d.metrics.memory_percentage is not None
         ]
         storage_values = [
             d.metrics.storage_percentage
             for d in devices_with_metrics
-            if d.metrics.storage_percentage is not None
+            if d.metrics and d.metrics.storage_percentage is not None
         ]
         temp_values = [
             d.metrics.temperature
             for d in devices_with_metrics
-            if d.metrics.temperature is not None
+            if d.metrics and d.metrics.temperature is not None
         ]
 
         return {

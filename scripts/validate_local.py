@@ -281,6 +281,12 @@ def main():
         "Bandit security scan"
     ))
 
+    # 9. Type checking with mypy
+    validation_results.append(run_command(
+        "python -m mypy custom_components/ --ignore-missing-imports --no-strict-optional",
+        "mypy type checking"
+    ))
+
     print("\n" + "=" * 60)
     print("📊 VALIDATION SUMMARY")
     print("=" * 60)
