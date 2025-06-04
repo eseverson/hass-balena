@@ -139,13 +139,11 @@ class TestDeviceCompatibility:
                 "status": "Configuring",
                 "is_online": False,
                 "metrics": None,
-                "last_seen": None,
             },
             {
                 "name": "Device updating OS",
                 "status": "Updating",
                 "is_online": True,
-                "is_updating": True,
                 "metrics": BalenaDeviceMetrics(cpu_usage=100.0),
             },
             {
@@ -158,7 +156,6 @@ class TestDeviceCompatibility:
                 "name": "Device offline for extended period",
                 "status": "Offline",
                 "is_online": False,
-                "last_seen": datetime.now() - timedelta(days=7),
             },
             {
                 "name": "Device with extreme resource usage",
@@ -184,14 +181,13 @@ class TestDeviceCompatibility:
                 fleet_name="edge-case-fleet",
                 is_online=case["is_online"],
                 status=case["status"],
-                last_seen=case.get("last_seen"),
             )
 
             if case.get("metrics"):
                 device.metrics = case["metrics"]
 
-            if case.get("is_updating"):
-                device.is_updating = True
+            # Note: is_updating is a computed property based on status, so we can't set it directly
+            # but the status "Updating" will make is_updating return True
 
             # Test that the device object handles edge cases gracefully
             assert device.uuid is not None
@@ -201,14 +197,20 @@ class TestDeviceCompatibility:
             # Test health assessment for edge cases
             if device.metrics and device.is_online:
                 # Should detect high resource usage
-                if device.metrics.cpu_usage > 95:
+                if device.metrics.cpu_usage and device.metrics.cpu_usage > 95:
                     assert device.metrics.cpu_percentage > 95
-                if device.metrics.memory_percentage > 95:
+                if device.metrics.memory_percentage and device.metrics.memory_percentage > 95:
                     # Should be flagged as critical
                     pass
                 if device.metrics.temperature and device.metrics.temperature > 80:
                     # Should be flagged for high temperature
                     pass
+
+            # Test computed properties
+            if case["status"] == "Updating":
+                assert device.is_updating is True
+            else:
+                assert device.is_updating is False
 
 
 class TestFleetManagementIntegration:
@@ -384,8 +386,20 @@ class TestAutomationAndTriggerIntegration:
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
         from custom_components.balena_cloud.binary_sensor import BalenaCloudBinarySensorEntity, BINARY_SENSOR_TYPES
 
-        coordinator = AsyncMock()
-        coordinator.get_device.return_value = mock_device
+        # Use real device object instead of mock for property changes to work
+        test_device = BalenaDevice(
+            uuid="device-uuid-1",
+            device_name="Test Device 1",
+            device_type="raspberrypi4-64",
+            fleet_id=1001,
+            fleet_name="test-fleet",
+            is_online=True,
+            status="Idle",
+        )
+        test_device.metrics = BalenaDeviceMetrics(cpu_usage=25.5)
+
+        coordinator = MagicMock()
+        coordinator.get_device.return_value = test_device
 
         # Test CPU sensor state changes
         cpu_sensor = BalenaCloudSensorEntity(
@@ -394,8 +408,11 @@ class TestAutomationAndTriggerIntegration:
             device_uuid="device-uuid-1",
         )
 
+        # Initial value
+        assert cpu_sensor.native_value == 25.5
+
         # Simulate CPU usage increasing
-        mock_device.metrics.cpu_usage = 95.0
+        test_device.metrics.cpu_usage = 95.0
         assert cpu_sensor.native_value == 95.0
 
         # Test binary sensor state changes
@@ -405,9 +422,12 @@ class TestAutomationAndTriggerIntegration:
             device_uuid="device-uuid-1",
         )
 
+        # Initial state
+        assert online_sensor.is_on is True
+
         # Simulate device going offline
-        mock_device.is_online = False
-        coordinator.get_device.return_value = mock_device
+        test_device.is_online = False
+        coordinator.get_device.return_value = test_device
 
         # Should reflect new state
         assert online_sensor.is_on is False
@@ -441,7 +461,7 @@ class TestAutomationAndTriggerIntegration:
 
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = AsyncMock()
+        coordinator = MagicMock()
         coordinator.get_device.return_value = mock_device
 
         cpu_sensor = BalenaCloudSensorEntity(

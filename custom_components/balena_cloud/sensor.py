@@ -11,19 +11,40 @@ from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
                                              SensorEntityDescription,
                                              SensorStateClass)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
-                    ATTR_FLEET_ID, ATTR_FLEET_NAME, ATTR_IP_ADDRESS, ATTR_LAST_SEEN,
-                    ATTR_MAC_ADDRESS, ATTR_MEMORY_TOTAL, ATTR_MEMORY_USAGE,
-                    ATTR_OS_VERSION, ATTR_PUBLIC_ADDRESS, ATTR_STORAGE_TOTAL, ATTR_STORAGE_USAGE,
-                    ATTR_SUPERVISOR_VERSION, DOMAIN, ICON_CPU, ICON_FLEET, ICON_IP_ADDRESS,
-                    ICON_LOCATION, ICON_MAC_ADDRESS, ICON_MEMORY,
-                    ICON_STORAGE, ICON_TEMPERATURE, UNIT_CELSIUS)
+from .const import (
+    ATTR_CPU_USAGE,
+    ATTR_DEVICE_NAME,
+    ATTR_DEVICE_TYPE,
+    ATTR_DEVICE_UUID,
+    ATTR_FLEET_ID,
+    ATTR_FLEET_NAME,
+    ATTR_IP_ADDRESS,
+    ATTR_IS_ONLINE,
+    ATTR_LAST_SEEN,
+    ATTR_MAC_ADDRESS,
+    ATTR_MEMORY_TOTAL,
+    ATTR_MEMORY_USAGE,
+    ATTR_OS_VERSION,
+    ATTR_PUBLIC_ADDRESS,
+    ATTR_STORAGE_TOTAL,
+    ATTR_STORAGE_USAGE,
+    ATTR_SUPERVISOR_VERSION,
+    ATTR_TEMPERATURE,
+    DOMAIN,
+    ICON_CPU,
+    ICON_FLEET,
+    ICON_IP_ADDRESS,
+    ICON_MAC_ADDRESS,
+    ICON_MEMORY,
+    ICON_STORAGE,
+    ICON_TEMPERATURE,
+)
 from .coordinator import BalenaCloudDataUpdateCoordinator
 from .models import BalenaDevice
 
@@ -92,7 +113,7 @@ SENSOR_TYPES: tuple[BalenaCloudSensorEntityDescription, ...] = (
     BalenaCloudSensorEntityDescription(
         key="temperature",
         name="Temperature",
-        native_unit_of_measurement=UNIT_CELSIUS,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         icon=ICON_TEMPERATURE,
@@ -209,6 +230,7 @@ class BalenaCloudSensorEntity(
             ATTR_DEVICE_TYPE: self.device.device_type,
             ATTR_FLEET_ID: self.device.fleet_id,
             ATTR_FLEET_NAME: self.device.fleet_name,
+            ATTR_IS_ONLINE: self.device.is_online,
             ATTR_OS_VERSION: self.device.os_version,
             ATTR_SUPERVISOR_VERSION: self.device.supervisor_version,
             ATTR_IP_ADDRESS: self.device.ip_address,

@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from custom_components.balena_cloud.const import DOMAIN
+from custom_components.balena_cloud.models import BalenaDevice, BalenaDeviceMetrics
 
 
 class TestCompleteUserWorkflows:
@@ -63,6 +64,7 @@ class TestCompleteUserWorkflows:
         # Step 4: Integration is set up in Home Assistant
         config_entry = ConfigEntry(
             version=1,
+            minor_version=1,
             domain=DOMAIN,
             title="Balena Cloud (test_user)",
             data=result["data"],
@@ -72,6 +74,9 @@ class TestCompleteUserWorkflows:
             },
             entry_id="test_entry_id",
             source="user",
+            unique_id=None,
+            discovery_keys=set(),
+            subentries_data={},
         )
 
         # Mock the full integration setup
@@ -124,24 +129,29 @@ class TestCompleteUserWorkflows:
     async def test_device_monitoring_workflow(self, hass: HomeAssistant):
         """Test device monitoring workflow."""
         # Set up integration with mock data
-        coordinator = AsyncMock()
+        coordinator = MagicMock()
 
         # Create test device with metrics
-        test_device = MagicMock()
-        test_device.uuid = "monitoring-device-uuid"
-        test_device.display_name = "Monitoring Test Device"
-        test_device.device_type = "raspberrypi4-64"
-        test_device.fleet_name = "monitoring-fleet"
-        test_device.is_online = True
-        test_device.status = "Idle"
-        test_device.ip_address = "192.168.1.100"
+        test_device = BalenaDevice(
+            uuid="monitoring-device-uuid",
+            device_name="Monitoring Test Device",
+            device_type="raspberrypi4-64",
+            fleet_id=1001,
+            fleet_name="monitoring-fleet",
+            is_online=True,
+            status="Idle",
+            ip_address="192.168.1.100",
+        )
 
         # Add metrics
-        test_device.metrics = MagicMock()
-        test_device.metrics.cpu_percentage = 75.5
-        test_device.metrics.memory_percentage = 60.2
-        test_device.metrics.storage_percentage = 45.8
-        test_device.metrics.temperature = 55.3
+        test_device.metrics = BalenaDeviceMetrics(
+            cpu_usage=75.5,
+            memory_usage=1205000000,  # ~60.2% of 2GB
+            memory_total=2000000000,
+            storage_usage=14653000000,  # ~45.8% of 32GB
+            storage_total=32000000000,
+            temperature=55.3,
+        )
 
         coordinator.get_device.return_value = test_device
         coordinator.devices = {"monitoring-device-uuid": test_device}
@@ -185,15 +195,18 @@ class TestCompleteUserWorkflows:
     @pytest.mark.asyncio
     async def test_device_control_workflow(self, hass: HomeAssistant):
         """Test device control operations workflow."""
-        coordinator = AsyncMock()
+        coordinator = MagicMock()
 
         # Mock device
-        test_device = MagicMock()
-        test_device.uuid = "control-device-uuid"
-        test_device.display_name = "Control Test Device"
-        test_device.is_online = True
-        test_device.status = "Idle"
-        test_device.is_updating = False
+        test_device = BalenaDevice(
+            uuid="control-device-uuid",
+            device_name="Control Test Device",
+            device_type="raspberrypi4-64",
+            fleet_id=1001,
+            fleet_name="control-fleet",
+            is_online=True,
+            status="Idle",
+        )
 
         coordinator.get_device.return_value = test_device
         coordinator.devices = {"control-device-uuid": test_device}
@@ -248,18 +261,20 @@ class TestCompleteUserWorkflows:
     @pytest.mark.asyncio
     async def test_fleet_management_workflow(self, hass: HomeAssistant):
         """Test fleet management workflow."""
-        coordinator = AsyncMock()
+        coordinator = MagicMock()
 
         # Create fleet with multiple devices
         fleet_devices = []
         for i in range(5):
-            device = MagicMock()
-            device.uuid = f"fleet-device-{i}"
-            device.display_name = f"Fleet Device {i}"
-            device.fleet_id = 1001
-            device.fleet_name = "management-fleet"
-            device.is_online = i % 2 == 0  # Alternate online/offline
-            device.status = "Idle" if device.is_online else "Offline"
+            device = BalenaDevice(
+                uuid=f"fleet-device-{i}",
+                device_name=f"Fleet Device {i}",
+                device_type="raspberrypi4-64",
+                fleet_id=1001,
+                fleet_name="management-fleet",
+                is_online=(i % 2 == 0),  # Alternate online/offline
+                status="Idle" if (i % 2 == 0) else "Offline"
+            )
             fleet_devices.append(device)
 
         # Mock coordinator methods
@@ -295,16 +310,19 @@ class TestCompleteUserWorkflows:
     @pytest.mark.asyncio
     async def test_automation_integration_workflow(self, hass: HomeAssistant):
         """Test integration with Home Assistant automations."""
-        coordinator = AsyncMock()
+        coordinator = MagicMock()
 
         # Create device for automation testing
-        test_device = MagicMock()
-        test_device.uuid = "automation-device-uuid"
-        test_device.display_name = "Automation Test Device"
-        test_device.is_online = True
-        test_device.status = "Idle"
-        test_device.metrics = MagicMock()
-        test_device.metrics.cpu_percentage = 45.0  # Normal CPU usage
+        test_device = BalenaDevice(
+            uuid="automation-device-uuid",
+            device_name="Automation Test Device",
+            device_type="raspberrypi4-64",
+            fleet_id=1001,
+            fleet_name="automation-fleet",
+            is_online=True,
+            status="Idle",
+        )
+        test_device.metrics = BalenaDeviceMetrics(cpu_usage=45.0)  # Normal CPU usage
 
         coordinator.get_device.return_value = test_device
         coordinator.async_restart_application = AsyncMock(return_value=True)
@@ -323,7 +341,7 @@ class TestCompleteUserWorkflows:
         assert cpu_sensor.available is True
 
         # Simulate high CPU usage triggering automation
-        test_device.metrics.cpu_percentage = 95.0  # High CPU usage
+        test_device.metrics.cpu_usage = 95.0  # High CPU usage
 
         # In a real scenario, this would trigger an automation
         # Here we simulate the automation response
@@ -374,12 +392,13 @@ class TestCompleteUserWorkflows:
         assert result is True
 
         # Test entity error handling
-        coordinator.get_device.return_value = None  # Device not found
+        coordinator_mock = MagicMock()
+        coordinator_mock.get_device.return_value = None  # Device not found
 
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
         sensor = BalenaCloudSensorEntity(
-            coordinator=coordinator,
+            coordinator=coordinator_mock,
             description=SENSOR_TYPES[0],
             device_uuid="non-existent-device",
         )
@@ -394,6 +413,7 @@ class TestCompleteUserWorkflows:
         # Create initial config entry
         config_entry = ConfigEntry(
             version=1,
+            minor_version=1,
             domain=DOMAIN,
             title="Balena Cloud Test",
             data={
@@ -406,12 +426,15 @@ class TestCompleteUserWorkflows:
             },
             entry_id="test_entry_id",
             source="user",
+            unique_id=None,
+            discovery_keys=set(),
+            subentries_data={},
         )
 
         # Test options flow for configuration updates
-        from custom_components.balena_cloud.config_flow import BalenaCloudOptionsFlow
+        from custom_components.balena_cloud.config_flow import BalenaCloudOptionsFlowHandler
 
-        options_flow = BalenaCloudOptionsFlow(config_entry)
+        options_flow = BalenaCloudOptionsFlowHandler(config_entry)
 
         # Test updating options
         result = await options_flow.async_step_init({
@@ -435,19 +458,26 @@ class TestRealWorldScenarios:
         # Simulate IoT sensor fleet with many small devices
         devices = []
         for i in range(20):
-            device = MagicMock()
-            device.uuid = f"iot-sensor-{i:03d}"
-            device.display_name = f"IoT Sensor {i:03d}"
-            device.device_type = "raspberry-pi"
-            device.fleet_name = "iot-sensors"
-            device.is_online = i % 5 != 0  # 80% online rate
-            device.status = "Idle" if device.is_online else "Offline"
+            device = BalenaDevice(
+                uuid=f"iot-sensor-{i:03d}",
+                device_name=f"IoT Sensor {i:03d}",
+                device_type="raspberry-pi",
+                fleet_id=1001,
+                fleet_name="iot-sensors",
+                is_online=(i % 5 != 0),  # 80% online rate
+                status="Idle" if (i % 5 != 0) else "Offline"
+            )
 
             if device.is_online:
-                device.metrics = MagicMock()
-                device.metrics.cpu_percentage = 10.0 + (i % 20)  # 10-30% CPU
-                device.metrics.memory_percentage = 30.0 + (i % 40)  # 30-70% memory
-                device.metrics.temperature = 35.0 + (i % 15)  # 35-50°C
+                device.metrics = BalenaDeviceMetrics(
+                    cpu_usage=10.0 + (i % 20),  # 10-30% CPU
+                    memory_usage=None,  # Set below
+                    memory_total=512000000,  # 512MB total
+                    temperature=35.0 + (i % 15)  # 35-50°C
+                )
+                # Calculate memory usage for 30-70% range
+                memory_percent = 30.0 + (i % 40)
+                device.metrics.memory_usage = int(device.metrics.memory_total * memory_percent / 100)
             else:
                 device.metrics = None
 
@@ -461,7 +491,7 @@ class TestRealWorldScenarios:
         assert len(offline_devices) == 4   # 20% of 20
 
         # Test average metrics calculation
-        avg_cpu = sum(d.metrics.cpu_percentage for d in online_devices) / len(online_devices)
+        avg_cpu = sum(d.metrics.cpu_usage for d in online_devices) / len(online_devices)
         avg_memory = sum(d.metrics.memory_percentage for d in online_devices) / len(online_devices)
 
         assert 10 <= avg_cpu <= 30
@@ -473,20 +503,31 @@ class TestRealWorldScenarios:
         # Simulate production deployment with critical services
         devices = []
         for i in range(5):
-            device = MagicMock()
-            device.uuid = f"prod-server-{i:02d}"
-            device.display_name = f"Production Server {i:02d}"
-            device.device_type = "intel-nuc"
-            device.fleet_name = "production-services"
-            device.is_online = True  # Production should be always online
-            device.status = "Idle"
+            device = BalenaDevice(
+                uuid=f"prod-server-{i:02d}",
+                device_name=f"Production Server {i:02d}",
+                device_type="intel-nuc",
+                fleet_id=1001,
+                fleet_name="production-services",
+                is_online=True,  # Production should be always online
+                status="Idle"
+            )
 
             # Production devices have higher resource usage
-            device.metrics = MagicMock()
-            device.metrics.cpu_percentage = 60.0 + (i * 5)  # 60-80% CPU
-            device.metrics.memory_percentage = 70.0 + (i * 3)  # 70-82% memory
-            device.metrics.storage_percentage = 50.0 + (i * 8)  # 50-82% storage
-            device.metrics.temperature = 45.0 + (i * 2)  # 45-53°C
+            device.metrics = BalenaDeviceMetrics(
+                cpu_usage=60.0 + (i * 5),  # 60-80% CPU
+                memory_usage=None,  # Set below
+                memory_total=8000000000,  # 8GB
+                storage_usage=None,  # Set below
+                storage_total=64000000000,  # 64GB
+                temperature=45.0 + (i * 2)  # 45-53°C
+            )
+
+            # Calculate memory and storage usage
+            memory_percent = 70.0 + (i * 3)  # 70-82% memory
+            storage_percent = 50.0 + (i * 8)  # 50-82% storage
+            device.metrics.memory_usage = int(device.metrics.memory_total * memory_percent / 100)
+            device.metrics.storage_usage = int(device.metrics.storage_total * storage_percent / 100)
 
             devices.append(device)
 
@@ -495,12 +536,12 @@ class TestRealWorldScenarios:
         warning_devices = []
 
         for device in devices:
-            if (device.metrics.cpu_percentage > 85 or
+            if (device.metrics.cpu_usage > 85 or
                 device.metrics.memory_percentage > 90 or
                 device.metrics.storage_percentage > 90 or
                 device.metrics.temperature > 70):
                 critical_devices.append(device)
-            elif (device.metrics.cpu_percentage > 75 or
+            elif (device.metrics.cpu_usage > 75 or
                   device.metrics.memory_percentage > 80 or
                   device.metrics.storage_percentage > 80 or
                   device.metrics.temperature > 60):
@@ -517,27 +558,32 @@ class TestRealWorldScenarios:
         # Simulate development environment with frequent changes
         dev_devices = []
         for i in range(3):
-            device = MagicMock()
-            device.uuid = f"dev-machine-{i:02d}"
-            device.display_name = f"Dev Machine {i:02d}"
-            device.device_type = "raspberrypi4-64"
-            device.fleet_name = "development"
-            device.is_online = True
-            device.status = "Updating" if i == 0 else "Idle"  # One device updating
-            device.is_updating = i == 0
+            device = BalenaDevice(
+                uuid=f"dev-machine-{i:02d}",
+                device_name=f"Dev Machine {i:02d}",
+                device_type="raspberrypi4-64",
+                fleet_id=1001,
+                fleet_name="development",
+                is_online=True,
+                status="Updating" if i == 0 else "Idle"  # One device updating
+            )
 
-            if not device.is_updating:
-                device.metrics = MagicMock()
-                device.metrics.cpu_percentage = 20.0 + (i * 15)
-                device.metrics.memory_percentage = 40.0 + (i * 10)
-                device.metrics.temperature = 40.0 + (i * 3)
+            if device.status != "Updating":
+                device.metrics = BalenaDeviceMetrics(
+                    cpu_usage=20.0 + (i * 15),
+                    memory_usage=None,  # Set below
+                    memory_total=4000000000,  # 4GB
+                    temperature=40.0 + (i * 3)
+                )
+                memory_percent = 40.0 + (i * 10)
+                device.metrics.memory_usage = int(device.metrics.memory_total * memory_percent / 100)
             else:
                 device.metrics = None  # No metrics during update
 
             dev_devices.append(device)
 
         # Test development scenario characteristics
-        updating_devices = [d for d in dev_devices if d.is_updating]
+        updating_devices = [d for d in dev_devices if d.status == "Updating"]
         idle_devices = [d for d in dev_devices if d.status == "Idle"]
 
         assert len(updating_devices) == 1
@@ -561,21 +607,21 @@ class TestRealWorldScenarios:
         all_devices = []
         for arch in architectures:
             for i in range(arch["count"]):
-                device = MagicMock()
-                device.uuid = f"{arch['type']}-{i:03d}"
-                device.display_name = f"{arch['type'].title()} Device {i:03d}"
-                device.device_type = arch["type"]
-                device.fleet_name = "mixed-architecture"
-                device.is_online = i % 3 != 0  # ~67% online rate
-                device.status = "Idle" if device.is_online else "Offline"
+                device = BalenaDevice(
+                    uuid=f"{arch['type']}-{i:03d}",
+                    device_name=f"{arch['type'].title()} Device {i:03d}",
+                    device_type=arch["type"],
+                    fleet_id=1001,
+                    fleet_name="mixed-architecture",
+                    is_online=(i % 3 != 0),  # ~67% online rate
+                    status="Idle" if (i % 3 != 0) else "Offline"
+                )
 
                 if device.is_online:
-                    device.metrics = MagicMock()
-                    # Different architectures have different baseline performance
-                    memory_total = arch["memory_base"]
-                    device.metrics.memory_total = memory_total
-                    device.metrics.memory_usage = memory_total * 0.4  # 40% usage
-                    device.metrics.memory_percentage = 40.0
+                    device.metrics = BalenaDeviceMetrics(
+                        memory_total=arch["memory_base"],
+                        memory_usage=int(arch["memory_base"] * 0.4),  # 40% usage
+                    )
 
                 all_devices.append(device)
 
@@ -664,13 +710,16 @@ class TestPerformanceScenarios:
         # Create many device objects
         devices = []
         for i in range(1000):
-            device = MagicMock()
-            device.uuid = f"memory-test-device-{i:04d}"
-            device.display_name = f"Memory Test Device {i:04d}"
-            device.device_type = "raspberrypi4-64"
-            device.fleet_name = "memory-test-fleet"
-            device.is_online = True
-            device.metrics = MagicMock()
+            device = BalenaDevice(
+                uuid=f"memory-test-device-{i:04d}",
+                device_name=f"Memory Test Device {i:04d}",
+                device_type="raspberrypi4-64",
+                fleet_id=1001,
+                fleet_name="memory-test-fleet",
+                is_online=True,
+                status="Idle"
+            )
+            device.metrics = BalenaDeviceMetrics()
             devices.append(device)
 
         # Test filtering operations on large dataset
