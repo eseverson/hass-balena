@@ -15,6 +15,7 @@ from custom_components.balena_cloud.const import DOMAIN
 class TestHomeAssistantIntegration:
     """Test Home Assistant integration setup and teardown."""
 
+    @pytest.mark.asyncio
     async def test_integration_setup_success(self, hass: HomeAssistant, mock_config_entry):
         """Test successful integration setup."""
 
@@ -48,6 +49,7 @@ class TestHomeAssistantIntegration:
             mock_coordinator.assert_called_once()
             coordinator_instance.async_config_entry_first_refresh.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_integration_unload_success(self, hass: HomeAssistant, mock_config_entry):
         """Test successful integration unload."""
 
@@ -81,6 +83,7 @@ class TestHomeAssistantIntegration:
                 assert result is True
                 assert config_entry.entry_id not in hass.data[DOMAIN]
 
+    @pytest.mark.asyncio
     async def test_integration_setup_failure(self, hass: HomeAssistant, mock_config_entry):
         """Test integration setup failure handling."""
 
@@ -144,6 +147,7 @@ class TestEntityPlatformIntegration:
 
             return coordinator_instance
 
+    @pytest.mark.asyncio
     async def test_sensor_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test sensor platform setup."""
         coordinator = await setup_integration
@@ -168,6 +172,7 @@ class TestEntityPlatformIntegration:
             added_entities = mock_add_entities.call_args[0][0]
             assert len(added_entities) > 0
 
+    @pytest.mark.asyncio
     async def test_binary_sensor_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test binary sensor platform setup."""
         coordinator = await setup_integration
@@ -187,6 +192,7 @@ class TestEntityPlatformIntegration:
             added_entities = mock_add_entities.call_args[0][0]
             assert len(added_entities) > 0
 
+    @pytest.mark.asyncio
     async def test_button_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test button platform setup."""
         coordinator = await setup_integration
@@ -237,6 +243,7 @@ class TestServiceIntegration:
 
         return service_handler, coordinator
 
+    @pytest.mark.asyncio
     async def test_restart_application_service(self, hass: HomeAssistant, setup_services):
         """Test restart application service call."""
         service_handler, coordinator = await setup_services
@@ -254,6 +261,7 @@ class TestServiceIntegration:
 
         coordinator.async_restart_application.assert_called_once_with("device-uuid-1", None)
 
+    @pytest.mark.asyncio
     async def test_reboot_device_service(self, hass: HomeAssistant, setup_services):
         """Test reboot device service call."""
         service_handler, coordinator = await setup_services
@@ -270,6 +278,7 @@ class TestServiceIntegration:
 
         coordinator.async_reboot_device.assert_called_once_with("device-uuid-1")
 
+    @pytest.mark.asyncio
     async def test_update_environment_service(self, hass: HomeAssistant, setup_services):
         """Test update environment variables service call."""
         service_handler, coordinator = await setup_services
@@ -288,6 +297,7 @@ class TestServiceIntegration:
             "device-uuid-1", {"TEST_VAR": "test_value"}
         )
 
+    @pytest.mark.asyncio
     async def test_service_calls_without_confirmation(self, hass: HomeAssistant, setup_services):
         """Test service calls without required confirmation."""
         service_handler, coordinator = await setup_services
@@ -306,6 +316,7 @@ class TestServiceIntegration:
         # Should not have been called
         coordinator.async_restart_application.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_bulk_operations(self, hass: HomeAssistant, setup_services):
         """Test bulk operation services."""
         service_handler, coordinator = await setup_services
@@ -333,6 +344,7 @@ class TestServiceIntegration:
 class TestConfigurationFlow:
     """Test configuration flow integration."""
 
+    @pytest.mark.asyncio
     async def test_config_flow_user_step(self, hass: HomeAssistant):
         """Test user step of config flow."""
 
@@ -357,6 +369,7 @@ class TestConfigurationFlow:
             assert result["type"] == "form"
             assert result["step_id"] == "fleets"
 
+    @pytest.mark.asyncio
     async def test_config_flow_fleet_step(self, hass: HomeAssistant):
         """Test fleet selection step of config flow."""
 
@@ -377,6 +390,7 @@ class TestConfigurationFlow:
         assert result["data"]["api_token"] == "test_token"
         assert result["data"]["fleets"] == [1001]
 
+    @pytest.mark.asyncio
     async def test_config_flow_validation_error(self, hass: HomeAssistant):
         """Test config flow with validation error."""
 
@@ -425,6 +439,7 @@ class TestEntityStateManagement:
 
         return device
 
+    @pytest.mark.asyncio
     async def test_sensor_entity_state(self, mock_device):
         """Test sensor entity state updates."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
@@ -443,6 +458,7 @@ class TestEntityStateManagement:
         assert cpu_sensor.available is True
         assert "device_uuid" in cpu_sensor.extra_state_attributes
 
+    @pytest.mark.asyncio
     async def test_binary_sensor_entity_state(self, mock_device):
         """Test binary sensor entity state updates."""
         from custom_components.balena_cloud.binary_sensor import BalenaCloudBinarySensorEntity, BINARY_SENSOR_TYPES
@@ -461,6 +477,7 @@ class TestEntityStateManagement:
         assert online_sensor.available is True
         assert online_sensor.icon == "mdi:check-circle"
 
+    @pytest.mark.asyncio
     async def test_button_entity_press(self, mock_device):
         """Test button entity press functionality."""
         from custom_components.balena_cloud.button import BalenaCloudButtonEntity, BUTTON_TYPES
@@ -480,6 +497,7 @@ class TestEntityStateManagement:
 
         coordinator.async_restart_application.assert_called_once_with("device-uuid-1")
 
+    @pytest.mark.asyncio
     async def test_entity_availability(self, mock_device):
         """Test entity availability logic."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
@@ -503,6 +521,7 @@ class TestEntityStateManagement:
 class TestDeviceRegistryIntegration:
     """Test device registry integration."""
 
+    @pytest.mark.asyncio
     async def test_device_info_creation(self, mock_device):
         """Test device info creation for Home Assistant device registry."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
@@ -524,6 +543,7 @@ class TestDeviceRegistryIntegration:
         assert device_info["model"] == "raspberrypi4-64"
         assert "configuration_url" in device_info
 
+    @pytest.mark.asyncio
     async def test_device_unique_id_generation(self, mock_device):
         """Test unique ID generation for entities."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
@@ -544,6 +564,7 @@ class TestDeviceRegistryIntegration:
 class TestAdvancedComponentIntegration:
     """Test integration of advanced components."""
 
+    @pytest.mark.asyncio
     async def test_device_card_integration(self, mock_device):
         """Test device card component integration."""
         from custom_components.balena_cloud.device_card import BalenaDeviceCard
@@ -564,6 +585,7 @@ class TestAdvancedComponentIntegration:
         assert "overall_health" in health
         assert "health_score" in health
 
+    @pytest.mark.asyncio
     async def test_fleet_overview_integration(self, mock_device):
         """Test fleet overview component integration."""
         from custom_components.balena_cloud.fleet_overview import BalenaFleetOverview

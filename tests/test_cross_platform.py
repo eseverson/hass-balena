@@ -43,6 +43,7 @@ class TestDeviceCompatibility:
             },
         }
 
+    @pytest.mark.asyncio
     async def test_device_architecture_compatibility(self, device_architectures):
         """Test device compatibility across different architectures."""
 
@@ -76,6 +77,7 @@ class TestDeviceCompatibility:
             expected_memory_percentage = 25.0
             assert abs(device.metrics.memory_percentage - expected_memory_percentage) < 0.1
 
+    @pytest.mark.asyncio
     async def test_multi_service_device_scenarios(self):
         """Test devices with multiple services and complex configurations."""
 
@@ -127,6 +129,7 @@ class TestDeviceCompatibility:
             )
             assert result is True
 
+    @pytest.mark.asyncio
     async def test_edge_case_device_states(self):
         """Test handling of edge case device states and conditions."""
 
@@ -211,6 +214,7 @@ class TestDeviceCompatibility:
 class TestFleetManagementIntegration:
     """Test fleet management functionality across different scenarios."""
 
+    @pytest.mark.asyncio
     async def test_large_fleet_handling(self, performance_test_data):
         """Test handling of large fleets with many devices."""
 
@@ -249,6 +253,7 @@ class TestFleetManagementIntegration:
         assert online_devices > 0
         assert len(device_types) > 0
 
+    @pytest.mark.asyncio
     async def test_multi_fleet_account_scenarios(self):
         """Test scenarios with multiple fleets in a single account."""
 
@@ -301,6 +306,7 @@ class TestFleetManagementIntegration:
         user_accessible_fleets = [f for f in fleets if f["device_count"] > 0]
         assert len(user_accessible_fleets) == 4
 
+    @pytest.mark.asyncio
     async def test_fleet_permission_and_access_testing(self):
         """Test fleet permissions and access control."""
 
@@ -335,6 +341,7 @@ class TestFleetManagementIntegration:
                 # Read-only user has limited access
                 assert len(user["accessible_fleets"]) <= 1
 
+    @pytest.mark.asyncio
     async def test_device_addition_and_removal_scenarios(self):
         """Test dynamic device addition and removal from fleets."""
 
@@ -370,6 +377,7 @@ class TestFleetManagementIntegration:
 class TestAutomationAndTriggerIntegration:
     """Test integration with Home Assistant automations and triggers."""
 
+    @pytest.mark.asyncio
     async def test_entity_state_change_triggers(self, mock_device):
         """Test entity state changes triggering automations."""
 
@@ -404,6 +412,7 @@ class TestAutomationAndTriggerIntegration:
         # Should reflect new state
         assert online_sensor.is_on is False
 
+    @pytest.mark.asyncio
     async def test_service_calls_from_automations(self, sample_automation_config):
         """Test service calls triggered from Home Assistant automations."""
 
@@ -426,6 +435,7 @@ class TestAutomationAndTriggerIntegration:
 
         coordinator.async_restart_application.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_conditional_logic_with_device_attributes(self, mock_device):
         """Test conditional logic using device attributes in automations."""
 
@@ -473,6 +483,7 @@ class TestAutomationAndTriggerIntegration:
             # We're verifying the attributes are available for such conditions
             assert "value_template" in condition
 
+    @pytest.mark.asyncio
     async def test_complex_automation_scenarios(self, sample_automation_config):
         """Test complex automation scenarios with multiple devices and conditions."""
 
@@ -505,6 +516,7 @@ class TestAutomationAndTriggerIntegration:
 class TestPerformanceAndScalability:
     """Test performance and scalability characteristics."""
 
+    @pytest.mark.asyncio
     async def test_concurrent_device_operations(self):
         """Test concurrent operations on multiple devices."""
 
@@ -537,6 +549,7 @@ class TestPerformanceAndScalability:
         # Verify all devices were processed
         assert coordinator.async_restart_application.call_count == 20
 
+    @pytest.mark.asyncio
     async def test_memory_usage_with_large_datasets(self, performance_test_data):
         """Test memory usage with large device datasets."""
 
@@ -567,6 +580,7 @@ class TestPerformanceAndScalability:
         assert len(offline_devices) > 0
         assert len(online_devices) + len(offline_devices) == len(devices)
 
+    @pytest.mark.asyncio
     async def test_api_rate_limit_compliance(self):
         """Test compliance with API rate limits under load."""
 

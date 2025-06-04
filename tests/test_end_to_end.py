@@ -16,6 +16,7 @@ from custom_components.balena_cloud.const import DOMAIN
 class TestCompleteUserWorkflows:
     """Test complete user workflows from installation to usage."""
 
+    @pytest.mark.asyncio
     async def test_full_installation_and_setup_workflow(self, hass: HomeAssistant):
         """Test complete installation and setup workflow."""
         # Step 1: User starts configuration flow
@@ -119,6 +120,7 @@ class TestCompleteUserWorkflows:
             assert DOMAIN in hass.data
             assert config_entry.entry_id in hass.data[DOMAIN]
 
+    @pytest.mark.asyncio
     async def test_device_monitoring_workflow(self, hass: HomeAssistant):
         """Test device monitoring workflow."""
         # Set up integration with mock data
@@ -180,6 +182,7 @@ class TestCompleteUserWorkflows:
         assert online_sensor.is_on is False
         # CPU sensor should still be available but may show None for offline device
 
+    @pytest.mark.asyncio
     async def test_device_control_workflow(self, hass: HomeAssistant):
         """Test device control operations workflow."""
         coordinator = AsyncMock()
@@ -242,6 +245,7 @@ class TestCompleteUserWorkflows:
         # Verify the operation was called
         assert coordinator.async_restart_application.call_count >= 1
 
+    @pytest.mark.asyncio
     async def test_fleet_management_workflow(self, hass: HomeAssistant):
         """Test fleet management workflow."""
         coordinator = AsyncMock()
@@ -288,6 +292,7 @@ class TestCompleteUserWorkflows:
         # Should have been called 3 times (for online devices)
         assert coordinator.async_restart_application.call_count == 3
 
+    @pytest.mark.asyncio
     async def test_automation_integration_workflow(self, hass: HomeAssistant):
         """Test integration with Home Assistant automations."""
         coordinator = AsyncMock()
@@ -346,6 +351,7 @@ class TestCompleteUserWorkflows:
 
         # In a real scenario, this would trigger an offline alert automation
 
+    @pytest.mark.asyncio
     async def test_error_recovery_workflow(self, hass: HomeAssistant):
         """Test error recovery and resilience workflow."""
         coordinator = AsyncMock()
@@ -382,6 +388,7 @@ class TestCompleteUserWorkflows:
         assert sensor.available is False
         assert sensor.native_value is None
 
+    @pytest.mark.asyncio
     async def test_configuration_changes_workflow(self, hass: HomeAssistant):
         """Test configuration changes and options workflow."""
         # Create initial config entry
@@ -422,6 +429,7 @@ class TestCompleteUserWorkflows:
 class TestRealWorldScenarios:
     """Test real-world usage scenarios."""
 
+    @pytest.mark.asyncio
     async def test_iot_sensor_fleet_scenario(self):
         """Test scenario with IoT sensor fleet."""
         # Simulate IoT sensor fleet with many small devices
@@ -459,6 +467,7 @@ class TestRealWorldScenarios:
         assert 10 <= avg_cpu <= 30
         assert 30 <= avg_memory <= 70
 
+    @pytest.mark.asyncio
     async def test_production_deployment_scenario(self):
         """Test scenario with production deployment fleet."""
         # Simulate production deployment with critical services
@@ -502,6 +511,7 @@ class TestRealWorldScenarios:
         # No devices should be critical with current values
         assert len(critical_devices) == 0
 
+    @pytest.mark.asyncio
     async def test_development_testing_scenario(self):
         """Test scenario with development and testing environment."""
         # Simulate development environment with frequent changes
@@ -538,6 +548,7 @@ class TestRealWorldScenarios:
             assert device.metrics is None
             assert device.status == "Updating"
 
+    @pytest.mark.asyncio
     async def test_mixed_architecture_scenario(self):
         """Test scenario with mixed device architectures."""
         architectures = [
@@ -591,6 +602,7 @@ class TestRealWorldScenarios:
 class TestPerformanceScenarios:
     """Test performance under various load conditions."""
 
+    @pytest.mark.asyncio
     async def test_large_fleet_performance(self, performance_test_data):
         """Test performance with large fleet of devices."""
         start_time = datetime.now()
@@ -618,6 +630,7 @@ class TestPerformanceScenarios:
         assert len(devices) == 1000
         assert all(len(device_groups[fleet_id]) == 20 for fleet_id in device_groups)
 
+    @pytest.mark.asyncio
     async def test_concurrent_operations_performance(self):
         """Test performance of concurrent device operations."""
         coordinator = AsyncMock()
@@ -645,6 +658,7 @@ class TestPerformanceScenarios:
         # Should complete within reasonable time
         assert duration < 3.0  # Less than 3 seconds for 100 operations
 
+    @pytest.mark.asyncio
     async def test_memory_usage_with_large_datasets(self):
         """Test memory usage with large datasets."""
         # Create many device objects
@@ -672,6 +686,7 @@ class TestPerformanceScenarios:
         assert len(online_devices) == 1000
         assert len(devices_by_type["raspberrypi4-64"]) == 1000
 
+    @pytest.mark.asyncio
     async def test_api_rate_limit_handling_performance(self):
         """Test API rate limit handling under load."""
         api_client = AsyncMock()
