@@ -33,11 +33,13 @@ class TestBalenaCloudAPIClient:
         # Use new SDK-based constructor
         return BalenaCloudAPIClient("test_token")
 
+    @pytest.mark.asyncio
     async def test_api_client_initialization(self, api_client):
         """Test API client initialization."""
         assert api_client._api_token == "test_token"
         assert api_client._balena is not None
 
+    @pytest.mark.asyncio
     async def test_successful_user_info_request(self, api_client, mock_balena_api_response):
         """Test successful user info API request."""
         # Mock the SDK call
@@ -50,6 +52,7 @@ class TestBalenaCloudAPIClient:
             assert user_info["username"] == "test_user"
             assert user_info["email"] == "test@example.com"
 
+    @pytest.mark.asyncio
     async def test_successful_fleets_request(self, api_client, mock_balena_api_response):
         """Test successful fleets API request."""
         # Mock the SDK call
@@ -62,6 +65,7 @@ class TestBalenaCloudAPIClient:
             assert all(validate_fleet_data(fleet) for fleet in fleets)
             assert fleets[0]["app_name"] == "test-fleet-1"
 
+    @pytest.mark.asyncio
     async def test_successful_devices_request(self, api_client, mock_balena_api_response):
         """Test successful devices API request."""
         # Mock the SDK call
@@ -74,6 +78,7 @@ class TestBalenaCloudAPIClient:
             assert all(validate_device_data(device) for device in devices)
             assert devices[0]["device_name"] == "test-device-1"
 
+    @pytest.mark.asyncio
     async def test_authentication_error_handling(self, api_client, mock_auth_error_response):
         """Test authentication error handling."""
         from balena import exceptions as balena_exceptions
@@ -85,11 +90,13 @@ class TestBalenaCloudAPIClient:
             with pytest.raises(BalenaCloudAuthenticationError):
                 await api_client.async_get_user_info()
 
+    @pytest.mark.asyncio
     async def test_rate_limit_error_handling(self, api_client, mock_rate_limit_response):
         """Test rate limit error handling."""
         # SDK handles rate limiting internally, test basic functionality
         assert hasattr(api_client, 'async_get_user_info')
 
+    @pytest.mark.asyncio
     async def test_network_error_handling(self, api_client, mock_network_error):
         """Test network error handling."""
         from balena import exceptions as balena_exceptions
@@ -101,6 +108,7 @@ class TestBalenaCloudAPIClient:
             with pytest.raises(BalenaCloudAPIError):
                 await api_client.async_get_user_info()
 
+    @pytest.mark.asyncio
     async def test_timeout_error_handling(self, api_client, mock_timeout_error):
         """Test timeout error handling."""
         # Mock the SDK to raise a general exception
@@ -110,6 +118,7 @@ class TestBalenaCloudAPIClient:
             with pytest.raises(BalenaCloudAPIError):
                 await api_client.async_get_user_info()
 
+    @pytest.mark.asyncio
     async def test_retry_mechanism_success(self, api_client):
         """Test retry mechanism with eventual success."""
         # Test the retry decorator functionality
@@ -127,6 +136,7 @@ class TestBalenaCloudAPIClient:
             assert result["id"] == 12345
             assert call_count == 2
 
+    @pytest.mark.asyncio
     async def test_retry_mechanism_max_retries(self, api_client):
         """Test retry mechanism with max retries exceeded."""
         # Mock to always fail
@@ -136,6 +146,7 @@ class TestBalenaCloudAPIClient:
             with pytest.raises(BalenaCloudAPIError):
                 await api_client.async_get_user_info()
 
+    @pytest.mark.asyncio
     async def test_device_control_operations(self, api_client):
         """Test device control operations."""
         # Mock successful operations
@@ -150,11 +161,13 @@ class TestBalenaCloudAPIClient:
             result = await api_client.async_reboot_device("device-uuid-1")
             assert result is True
 
+    @pytest.mark.asyncio
     async def test_token_validation(self, api_client):
         """Test API token validation."""
         # Test that the method exists and returns boolean
         assert hasattr(api_client, 'async_validate_token')
 
+    @pytest.mark.asyncio
     async def test_concurrent_api_requests(self, api_client):
         """Test concurrent API requests handling."""
         # Mock successful responses for concurrent requests
@@ -189,6 +202,7 @@ class TestAPIIntegrationScenarios:
             mock_config_entry["options"],
         )
 
+    @pytest.mark.asyncio
     async def test_complete_device_discovery_flow(self, coordinator_setup, mock_balena_api_response):
         """Test complete device discovery and data processing flow."""
         coordinator = coordinator_setup
@@ -219,6 +233,7 @@ class TestAPIIntegrationScenarios:
                 assert device.uuid == device_uuid
                 assert device.fleet_name in ["test-fleet-1", "test-fleet-2"]
 
+    @pytest.mark.asyncio
     async def test_error_recovery_during_update(self, coordinator_setup):
         """Test error recovery during data update."""
         coordinator = coordinator_setup
@@ -244,6 +259,7 @@ class TestAPIIntegrationScenarios:
             data = await coordinator._async_update_data()
             assert len(data["fleets"]) == 1
 
+    @pytest.mark.asyncio
     async def test_large_dataset_handling(self, coordinator_setup, performance_test_data):
         """Test handling of large datasets."""
         coordinator = coordinator_setup
@@ -277,6 +293,7 @@ class TestAPIErrorHandling:
         """Create API client for error testing."""
         return BalenaCloudAPIClient("test_token")
 
+    @pytest.mark.asyncio
     async def test_http_error_codes(self, api_client):
         """Test handling of various HTTP error codes."""
         # Test with SDK exceptions
@@ -288,16 +305,19 @@ class TestAPIErrorHandling:
             with pytest.raises(BalenaCloudAPIError):
                 await api_client.async_get_user_info()
 
+    @pytest.mark.asyncio
     async def test_malformed_json_response(self, api_client):
         """Test handling of malformed JSON responses."""
         # SDK handles JSON parsing internally
         assert hasattr(api_client, 'async_get_user_info')
 
+    @pytest.mark.asyncio
     async def test_rate_limit_with_reset_time(self, api_client):
         """Test rate limit handling with reset time."""
         # SDK handles rate limiting internally, test basic functionality
         assert hasattr(api_client, 'async_get_user_info')
 
+    @pytest.mark.asyncio
     async def test_connection_timeout_scenarios(self, api_client):
         """Test various connection timeout scenarios."""
         # Test with various exception types
@@ -316,6 +336,7 @@ class TestAPISecurityValidation:
         """Create API client for security testing."""
         return BalenaCloudAPIClient("test_token")
 
+    @pytest.mark.asyncio
     async def test_secure_token_handling(self, mock_aiohttp_session):
         """Test secure token handling."""
         # Token should not appear in logs or error messages
@@ -329,6 +350,7 @@ class TestAPISecurityValidation:
         # Allow for the token to be masked or hidden
         assert "sensitive_token_12345" not in client_str or "***" in client_str
 
+    @pytest.mark.asyncio
     async def test_input_sanitization(self, api_client, security_test_scenarios):
         """Test input sanitization for security."""
         malicious_inputs = security_test_scenarios["malicious_inputs"]
@@ -346,6 +368,7 @@ class TestAPISecurityValidation:
                     assert "script" not in str(e).lower()
                     assert "passwd" not in str(e).lower()
 
+    @pytest.mark.asyncio
     async def test_request_parameter_validation(self, api_client):
         """Test request parameter validation."""
         # Test basic functionality with SDK
@@ -361,6 +384,7 @@ class TestAPIPerformanceAndReliability:
         """Create API client for performance testing."""
         return BalenaCloudAPIClient("test_token")
 
+    @pytest.mark.asyncio
     async def test_request_timing(self, api_client):
         """Test request timing and timeout handling."""
         from custom_components.balena_cloud.const import API_TIMEOUT
@@ -376,6 +400,7 @@ class TestAPIPerformanceAndReliability:
             request_time = (end_time - start_time).total_seconds()
             assert request_time < API_TIMEOUT
 
+    @pytest.mark.asyncio
     async def test_memory_usage_with_large_responses(self, api_client, performance_test_data):
         """Test memory usage with large API responses."""
         # Mock large response
@@ -386,11 +411,13 @@ class TestAPIPerformanceAndReliability:
             result = await api_client.async_get_devices()
             assert len(result) == 1000
 
+    @pytest.mark.asyncio
     async def test_rate_limit_backoff_strategy(self, api_client):
         """Test rate limit backoff strategy."""
         # Test the retry decorator functionality
         assert hasattr(api_client, 'async_get_user_info')
 
+    @pytest.mark.asyncio
     async def test_concurrent_request_limit(self, api_client):
         """Test handling of concurrent request limits."""
         # Mock successful responses for concurrent requests

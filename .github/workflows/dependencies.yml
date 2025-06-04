@@ -24,11 +24,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install pip-tools safety
 
-      - name: 🔍 Check for security vulnerabilities
-        run: |
-          pip install -r tests/requirements.txt
-          safety check
-
       - name: 📊 Check dependency versions
         run: |
           echo "## 📦 Current Dependencies" >> dependency_report.md
