@@ -201,8 +201,35 @@ class BalenaCloudSensorEntity(
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        return super().available and self.device is not None
+        """Return if entity is available.
+
+        Device sensors (CPU, memory, storage, temperature, IP, MAC) show as unavailable
+        when the device is offline since these metrics can only be obtained from a running device.
+
+        Cloud entities (fleet name) remain available even when device is offline since
+        they represent cloud-level information that exists regardless of device state.
+        """
+        device_available = super().available and self.device is not None
+
+        # If device doesn't exist or coordinator is unavailable, sensor is unavailable
+        if not device_available:
+            return False
+
+        # For device-specific sensors, check if device is online
+        # Cloud entities (like fleet_name) should remain available even when device is offline
+        device_specific_sensors = {
+            "cpu_usage",
+            "memory_usage",
+            "storage_usage",
+            "temperature",
+            "ip_address"
+        }
+
+        if self.entity_description.key in device_specific_sensors:
+            return self.device.is_online
+
+        # Cloud entities remain available even when device is offline
+        return True
 
     @property
     def name(self) -> str:

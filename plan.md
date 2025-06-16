@@ -151,6 +151,10 @@ This development plan outlines the comprehensive roadmap for building a HACS plu
   - Balena API response to Home Assistant entity mapping
   - Unit conversion and standardization
   - Data validation and sanitization
+- [x] Implement proper device sensor availability
+  - Device sensors (CPU, memory, storage, temperature, IP) show as unavailable when device is offline
+  - Cloud entities (fleet name) remain available even when device is offline
+  - Button actions properly require device to be online
 - [ ] Set up webhook support (if available)
   - Real-time event notifications from Balena Cloud
   - Webhook security and validation

@@ -11,6 +11,8 @@ from aiohttp import ClientError, ClientSession
 from custom_components.balena_cloud.api import BalenaCloudAPIClient, BalenaCloudAPIError, BalenaCloudAuthenticationError
 from custom_components.balena_cloud.models import BalenaDevice, BalenaFleet, BalenaDeviceMetrics
 from custom_components.balena_cloud.const import DOMAIN, DEFAULT_UPDATE_INTERVAL
+from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
+from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
 
 class TestBalenaCloudAPIClientUnit:
@@ -664,6 +666,76 @@ class TestEntityPlatformsUnit:
         )
 
         assert mac_sensor.native_value == "b8:27:eb:12:34:56"
+
+    def test_sensor_availability_logic(self):
+        """Test sensor availability based on device online status."""
+        # Create mock device with offline status
+        offline_device = BalenaDevice(
+            uuid="test-offline-device",
+            device_name="Offline Device",
+            device_type="raspberrypi4-64",
+            fleet_id=1,
+            fleet_name="Test Fleet",
+            is_online=False,  # Device is offline
+            status="offline",
+        )
+
+        # Create mock device with online status
+        online_device = BalenaDevice(
+            uuid="test-online-device",
+            device_name="Online Device",
+            device_type="raspberrypi4-64",
+            fleet_id=1,
+            fleet_name="Test Fleet",
+            is_online=True,  # Device is online
+            status="idle",
+        )
+
+        # Mock coordinator
+        coordinator = MagicMock(spec=BalenaCloudDataUpdateCoordinator)
+        coordinator.last_update_success = True
+
+        # Test device sensor (should be unavailable when device is offline)
+        device_sensor_desc = next(s for s in SENSOR_TYPES if s.key == "cpu_usage")
+
+        # Offline device - device sensor should be unavailable
+        offline_device_sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=device_sensor_desc,
+            device_uuid="test-offline-device"
+        )
+        coordinator.get_device.return_value = offline_device
+        assert offline_device_sensor.available == False, "Device sensor should be unavailable when device is offline"
+
+        # Online device - device sensor should be available
+        online_device_sensor = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=device_sensor_desc,
+            device_uuid="test-online-device"
+        )
+        coordinator.get_device.return_value = online_device
+        assert online_device_sensor.available == True, "Device sensor should be available when device is online"
+
+        # Test cloud entity (should remain available even when device is offline)
+        cloud_entity_desc = next(s for s in SENSOR_TYPES if s.key == "fleet_name")
+
+        # Offline device - cloud entity should still be available
+        offline_cloud_entity = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=cloud_entity_desc,
+            device_uuid="test-offline-device"
+        )
+        coordinator.get_device.return_value = offline_device
+        assert offline_cloud_entity.available == True, "Cloud entity should be available even when device is offline"
+
+        # Online device - cloud entity should be available
+        online_cloud_entity = BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=cloud_entity_desc,
+            device_uuid="test-online-device"
+        )
+        coordinator.get_device.return_value = online_device
+        assert online_cloud_entity.available == True, "Cloud entity should be available when device is online"
 
 
 class TestUtilityFunctionsUnit:
