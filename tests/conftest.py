@@ -1,14 +1,14 @@
-"""Test configuration and fixtures for Balena Cloud integration."""
+"""Test configuration and fixtures for Balena Cloud integration tests."""
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, Generator
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aiohttp import ClientSession
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
+import pytest_asyncio
 
 from custom_components.balena_cloud.const import DOMAIN
 
@@ -114,7 +114,7 @@ def mock_config_entry():
     }
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def mock_integration_setup(hass: HomeAssistant, mock_config_entry):
     """Set up the integration with mocked dependencies."""
 
@@ -181,10 +181,17 @@ class MockHomeAssistant:
 
     def __init__(self):
         self.data = {}
-        self.states = AsyncMock()
-        self.services = AsyncMock()
-        self.bus = AsyncMock()
-        self.config_entries = AsyncMock()
+        self.states = MagicMock()  # Use MagicMock for properties
+        self.services = MagicMock()  # Use MagicMock for properties
+        # Override has_service and async_register to be regular methods, not async
+        self.services.has_service = MagicMock(return_value=False)
+        self.services.async_register = MagicMock()
+        self.services.async_remove = MagicMock()
+        self.services.async_call = AsyncMock()  # This is actually awaited
+        self.bus = MagicMock()  # Use MagicMock for properties
+        self.config_entries = MagicMock()  # Use MagicMock for properties
+        # But async_forward_entry_setups is actually awaited
+        self.config_entries.async_forward_entry_setups = AsyncMock()
 
     async def async_block_till_done(self):
         """Mock async_block_till_done."""

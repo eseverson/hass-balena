@@ -1,6 +1,7 @@
 """Home Assistant integration tests for Balena Cloud."""
 from __future__ import annotations
 
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +12,10 @@ from homeassistant.setup import async_setup_component
 from custom_components.balena_cloud import async_setup_entry, async_unload_entry
 from custom_components.balena_cloud.const import DOMAIN
 from custom_components.balena_cloud.models import BalenaDevice, BalenaDeviceMetrics
+
+import pytest_asyncio
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class TestHomeAssistantIntegration:
@@ -125,7 +130,7 @@ class TestHomeAssistantIntegration:
 class TestEntityPlatformIntegration:
     """Test entity platform integration."""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def setup_integration(self, hass: HomeAssistant, mock_config_entry, mock_balena_api_response):
         """Set up integration with mock data."""
 
@@ -190,7 +195,7 @@ class TestEntityPlatformIntegration:
     @pytest.mark.asyncio
     async def test_sensor_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test sensor platform setup."""
-        coordinator = await setup_integration
+        coordinator = setup_integration
 
         # Import and test sensor platform
         from custom_components.balena_cloud.sensor import async_setup_entry as sensor_setup
@@ -215,7 +220,7 @@ class TestEntityPlatformIntegration:
     @pytest.mark.asyncio
     async def test_binary_sensor_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test binary sensor platform setup."""
-        coordinator = await setup_integration
+        coordinator = setup_integration
 
         from custom_components.balena_cloud.binary_sensor import async_setup_entry as binary_sensor_setup
 
@@ -235,7 +240,7 @@ class TestEntityPlatformIntegration:
     @pytest.mark.asyncio
     async def test_button_platform_setup(self, hass: HomeAssistant, setup_integration):
         """Test button platform setup."""
-        coordinator = await setup_integration
+        coordinator = setup_integration
 
         from custom_components.balena_cloud.button import async_setup_entry as button_setup
 
@@ -252,11 +257,169 @@ class TestEntityPlatformIntegration:
             added_entities = mock_add_entities.call_args[0][0]
             assert len(added_entities) > 0
 
+    @pytest.mark.asyncio
+    async def test_all_expected_entities_created(self, hass: HomeAssistant, setup_integration):
+        """Test that all expected entities are created for each device."""
+        coordinator = setup_integration
+
+        # Import all entity platforms
+        from custom_components.balena_cloud.sensor import async_setup_entry as sensor_setup
+        from custom_components.balena_cloud.binary_sensor import async_setup_entry as binary_sensor_setup
+        from custom_components.balena_cloud.button import async_setup_entry as button_setup
+        from custom_components.balena_cloud.switch import async_setup_entry as switch_setup
+
+        # Mock the data structure in hass
+        config_entry = MagicMock()
+        config_entry.entry_id = "test_entry_id"
+        hass.data[DOMAIN] = {"test_entry_id": coordinator}
+
+        # Collect all created entities
+        all_entities = []
+
+        # Set up sensor entities
+        with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_sensors:
+            await sensor_setup(hass, config_entry, mock_add_sensors)
+            sensor_entities = mock_add_sensors.call_args[0][0]
+            all_entities.extend(sensor_entities)
+
+        # Set up binary sensor entities
+        with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_binary_sensors:
+            await binary_sensor_setup(hass, config_entry, mock_add_binary_sensors)
+            binary_sensor_entities = mock_add_binary_sensors.call_args[0][0]
+            all_entities.extend(binary_sensor_entities)
+
+        # Set up button entities
+        with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_buttons:
+            await button_setup(hass, config_entry, mock_add_buttons)
+            button_entities = mock_add_buttons.call_args[0][0]
+            all_entities.extend(button_entities)
+
+        # Set up switch entities
+        with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_switches:
+            await switch_setup(hass, config_entry, mock_add_switches)
+            switch_entities = mock_add_switches.call_args[0][0]
+            all_entities.extend(switch_entities)
+
+        # Define expected entities per device
+        expected_sensors_per_device = [
+            "cpu_usage",
+            "memory_usage",
+            "storage_usage",
+            "temperature",
+            "fleet_name",
+            "ip_address",
+            "mac_address"
+        ]
+
+        expected_binary_sensors_per_device = [
+            "online",
+            "updating"
+        ]
+
+        expected_buttons_per_device = [
+            "restart_application",
+            "reboot_device",
+            "shutdown_device"
+        ]
+
+        expected_switches_per_device = [
+            "public_url"
+        ]
+
+        # Group entities by device
+        entities_by_device = {}
+        for entity in all_entities:
+            device_uuid = entity._device_uuid
+            if device_uuid not in entities_by_device:
+                entities_by_device[device_uuid] = []
+            entities_by_device[device_uuid].append(entity)
+
+        # Validate each device has all expected entities
+        for device_uuid, device_entities in entities_by_device.items():
+            device = coordinator.get_device(device_uuid)
+            assert device is not None, f"Device {device_uuid} not found in coordinator"
+
+            # Get entity keys for this device
+            entity_keys = []
+            for entity in device_entities:
+                if hasattr(entity, 'entity_description'):
+                    entity_keys.append(entity.entity_description.key)
+                elif hasattr(entity, '_attr_unique_id'):
+                    # For switches, extract the key from unique_id
+                    unique_id = entity._attr_unique_id
+                    key = unique_id.split('_', 1)[1] if '_' in unique_id else unique_id
+                    entity_keys.append(key)
+
+            # Check sensors
+            for sensor_key in expected_sensors_per_device:
+                expected_unique_id = f"{device_uuid}_{sensor_key}"
+                assert any(
+                    hasattr(entity, '_attr_unique_id') and entity._attr_unique_id == expected_unique_id
+                    or hasattr(entity, 'entity_description') and entity.entity_description.key == sensor_key
+                    for entity in device_entities
+                ), f"Missing sensor {sensor_key} for device {device_uuid}"
+
+            # Check binary sensors
+            for binary_sensor_key in expected_binary_sensors_per_device:
+                expected_unique_id = f"{device_uuid}_{binary_sensor_key}"
+                assert any(
+                    hasattr(entity, '_attr_unique_id') and entity._attr_unique_id == expected_unique_id
+                    or hasattr(entity, 'entity_description') and entity.entity_description.key == binary_sensor_key
+                    for entity in device_entities
+                ), f"Missing binary sensor {binary_sensor_key} for device {device_uuid}"
+
+            # Check buttons
+            for button_key in expected_buttons_per_device:
+                expected_unique_id = f"{device_uuid}_{button_key}"
+                assert any(
+                    hasattr(entity, '_attr_unique_id') and entity._attr_unique_id == expected_unique_id
+                    or hasattr(entity, 'entity_description') and entity.entity_description.key == button_key
+                    for entity in device_entities
+                ), f"Missing button {button_key} for device {device_uuid}"
+
+            # Check switches
+            for switch_key in expected_switches_per_device:
+                expected_unique_id = f"{device_uuid}_{switch_key}"
+                assert any(
+                    hasattr(entity, '_attr_unique_id') and entity._attr_unique_id == expected_unique_id
+                    for entity in device_entities
+                ), f"Missing switch {switch_key} for device {device_uuid}"
+
+        # Validate total entity count
+        expected_entities_per_device = (
+            len(expected_sensors_per_device) +
+            len(expected_binary_sensors_per_device) +
+            len(expected_buttons_per_device) +
+            len(expected_switches_per_device)
+        )
+        expected_total_entities = len(coordinator.devices) * expected_entities_per_device
+
+        assert len(all_entities) == expected_total_entities, (
+            f"Expected {expected_total_entities} entities total, but got {len(all_entities)}. "
+            f"Expected {expected_entities_per_device} per device for {len(coordinator.devices)} devices."
+        )
+
+        # Validate entity types
+        sensor_count = len([e for e in all_entities if type(e).__name__ == 'BalenaCloudSensorEntity'])
+        binary_sensor_count = len([e for e in all_entities if type(e).__name__ == 'BalenaCloudBinarySensorEntity'])
+        button_count = len([e for e in all_entities if type(e).__name__ == 'BalenaCloudButtonEntity'])
+        switch_count = len([e for e in all_entities if 'switch' in type(e).__name__.lower()])
+
+        expected_sensor_count = len(coordinator.devices) * len(expected_sensors_per_device)
+        expected_binary_sensor_count = len(coordinator.devices) * len(expected_binary_sensors_per_device)
+        expected_button_count = len(coordinator.devices) * len(expected_buttons_per_device)
+        expected_switch_count = len(coordinator.devices) * len(expected_switches_per_device)
+
+        assert sensor_count == expected_sensor_count, f"Expected {expected_sensor_count} sensors, got {sensor_count}"
+        assert binary_sensor_count == expected_binary_sensor_count, f"Expected {expected_binary_sensor_count} binary sensors, got {binary_sensor_count}"
+        assert button_count == expected_button_count, f"Expected {expected_button_count} buttons, got {button_count}"
+        assert switch_count == expected_switch_count, f"Expected {expected_switch_count} switches, got {switch_count}"
+
 
 class TestServiceIntegration:
     """Test service integration and calls."""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def setup_services(self, hass: HomeAssistant, mock_config_entry):
         """Set up services for testing."""
 
@@ -280,6 +443,7 @@ class TestServiceIntegration:
         # Mock the service system properly
         hass.services.has_service = MagicMock(return_value=False)  # So services get registered
         hass.services.async_register = MagicMock()
+        hass.services.async_remove = MagicMock()
 
         # Mock the actual service calls to directly call our coordinator
         async def mock_service_call(domain, service, data, **kwargs):
@@ -318,7 +482,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_restart_application_service(self, hass: HomeAssistant, setup_services):
         """Test restart application service call."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         # Test successful restart (without confirm parameter, as it's not in the schema)
         await hass.services.async_call(
@@ -335,7 +499,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_reboot_device_service(self, hass: HomeAssistant, setup_services):
         """Test reboot device service call."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         await hass.services.async_call(
             DOMAIN,
@@ -351,7 +515,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_update_environment_service(self, hass: HomeAssistant, setup_services):
         """Test update environment variables service call."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         await hass.services.async_call(
             DOMAIN,
@@ -370,7 +534,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_calls_without_confirmation(self, hass: HomeAssistant, setup_services):
         """Test service calls work normally (no confirmation parameter in schema)."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         # Service should execute normally since there's no confirmation parameter in the schema
         await hass.services.async_call(
@@ -388,7 +552,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_bulk_operations(self, hass: HomeAssistant, setup_services):
         """Test bulk operation services."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         # Mock multiple devices
         device1 = BalenaDevice(uuid="device-uuid-1", device_name="Device 1", device_type="rpi", fleet_id=1001, fleet_name="test", is_online=True, status="Idle")
@@ -422,7 +586,7 @@ class TestServiceIntegration:
     @pytest.mark.asyncio
     async def test_service_with_unknown_device(self, hass: HomeAssistant, setup_services):
         """Test service call with unknown device UUID."""
-        service_handler, coordinator = await setup_services
+        service_handler, coordinator = setup_services
 
         # This should not call the coordinator method since device is not found
         await hass.services.async_call(

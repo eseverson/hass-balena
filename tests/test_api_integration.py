@@ -2,24 +2,17 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from unittest.mock import patch
 
 import pytest
-from aiohttp import ClientError, ClientSession
 
 from custom_components.balena_cloud.api import (
     BalenaCloudAPIClient,
     BalenaCloudAPIError,
     BalenaCloudAuthenticationError,
-    BalenaCloudRateLimitError,
 )
-from custom_components.balena_cloud.const import (
-    API_TIMEOUT,
-    BALENA_API_BASE_URL,
-    BALENA_API_VERSION,
-    MAX_RETRIES,
-)
+from custom_components.balena_cloud.const import API_TIMEOUT
 
 from .conftest import validate_device_data, validate_fleet_data
 
@@ -89,12 +82,6 @@ class TestBalenaCloudAPIClient:
 
             with pytest.raises(BalenaCloudAuthenticationError):
                 await api_client.async_get_user_info()
-
-    @pytest.mark.asyncio
-    async def test_rate_limit_error_handling(self, api_client, mock_rate_limit_response):
-        """Test rate limit error handling."""
-        # SDK handles rate limiting internally, test basic functionality
-        assert hasattr(api_client, 'async_get_user_info')
 
     @pytest.mark.asyncio
     async def test_network_error_handling(self, api_client, mock_network_error):

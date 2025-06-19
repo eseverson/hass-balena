@@ -1,14 +1,17 @@
-"""Comprehensive unit tests for Balena Cloud integration components."""
+"""Unit tests for Balena Cloud integration components."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aiohttp import ClientError, ClientSession
 
-from custom_components.balena_cloud.api import BalenaCloudAPIClient, BalenaCloudAPIError, BalenaCloudAuthenticationError
+from custom_components.balena_cloud.api import (
+    BalenaCloudAPIClient,
+    BalenaCloudAPIError,
+    BalenaCloudAuthenticationError,
+)
 from custom_components.balena_cloud.models import BalenaDevice, BalenaFleet, BalenaDeviceMetrics
 from custom_components.balena_cloud.const import DOMAIN, DEFAULT_UPDATE_INTERVAL
 from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
@@ -21,7 +24,11 @@ class TestBalenaCloudAPIClientUnit:
     @pytest.fixture
     def api_client(self):
         """Create API client for unit testing."""
-        return BalenaCloudAPIClient("test_token_12345")
+        with patch('custom_components.balena_cloud.api.Balena') as mock_balena:
+            mock_balena_instance = MagicMock()
+            mock_balena.return_value = mock_balena_instance
+            client = BalenaCloudAPIClient("test_token_12345")
+            return client
 
     def test_api_client_initialization(self, api_client):
         """Test API client initialization with proper defaults."""
@@ -431,7 +438,7 @@ class TestConfigurationFlowUnit:
         from custom_components.balena_cloud.config_flow import BalenaCloudConfigFlow
 
         flow = BalenaCloudConfigFlow()
-        flow.hass = AsyncMock()
+        flow.hass = MagicMock()
         return flow
 
     def test_config_flow_initialization(self, mock_config_flow):
@@ -442,11 +449,12 @@ class TestConfigurationFlowUnit:
     @pytest.mark.asyncio
     async def test_config_flow_validate_input_method(self, mock_config_flow):
         """Test config flow input validation method."""
-        # Mock API client
+        # Mock API client with a more specific approach
         with patch("custom_components.balena_cloud.config_flow.BalenaCloudAPIClient") as mock_api_class:
-            mock_api = AsyncMock()
-            mock_api.async_validate_token.return_value = True
-            mock_api.async_get_user_info.return_value = {"username": "test_user"}
+            # Create a mock instance that doesn't use AsyncMock for the constructor
+            mock_api = MagicMock()
+            mock_api.async_validate_token = AsyncMock(return_value=True)
+            mock_api.async_get_user_info = AsyncMock(return_value={"username": "test_user"})
             mock_api_class.return_value = mock_api
 
             user_input = {"api_token": "valid_token_12345"}
@@ -465,11 +473,11 @@ class TestConfigurationFlowUnit:
 
         # Mock the API client constructor and its methods
         with patch("custom_components.balena_cloud.config_flow.BalenaCloudAPIClient") as mock_api_class:
-            mock_api = AsyncMock()
-            mock_api.async_get_fleets.return_value = [
+            mock_api = MagicMock()
+            mock_api.async_get_fleets = AsyncMock(return_value=[
                 {"id": 1001, "app_name": "fleet-1"},
                 {"id": 1002, "app_name": "fleet-2"},
-            ]
+            ])
             mock_api_class.return_value = mock_api
 
             await mock_config_flow._async_fetch_fleets()
@@ -517,8 +525,16 @@ class TestEntityPlatformsUnit:
         """Test sensor entity creation and basic properties."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
-        coordinator.get_device.return_value = mock_device_with_metrics
+        # Create a minimal mock object to avoid AsyncMock warnings
+        class MockCoordinator:
+            def __init__(self, device):
+                self.device = device
+                self.last_update_success = True
+
+            def get_device(self, device_uuid):
+                return self.device
+
+        coordinator = MockCoordinator(mock_device_with_metrics)
 
         # Test CPU sensor
         cpu_sensor_desc = SENSOR_TYPES[0]  # Assuming first is CPU
@@ -537,8 +553,16 @@ class TestEntityPlatformsUnit:
         """Test binary sensor entity creation and basic properties."""
         from custom_components.balena_cloud.binary_sensor import BalenaCloudBinarySensorEntity, BINARY_SENSOR_TYPES
 
-        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
-        coordinator.get_device.return_value = mock_device_with_metrics
+        # Create a minimal mock object to avoid AsyncMock warnings
+        class MockCoordinator:
+            def __init__(self, device):
+                self.device = device
+                self.last_update_success = True
+
+            def get_device(self, device_uuid):
+                return self.device
+
+        coordinator = MockCoordinator(mock_device_with_metrics)
 
         # Test online sensor
         online_sensor_desc = BINARY_SENSOR_TYPES[0]  # Assuming first is online status
@@ -557,9 +581,21 @@ class TestEntityPlatformsUnit:
         """Test button entity creation and basic properties."""
         from custom_components.balena_cloud.button import BalenaCloudButtonEntity, BUTTON_TYPES
 
-        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
-        coordinator.get_device.return_value = mock_device_with_metrics
-        coordinator.async_restart_application = AsyncMock(return_value=True)
+        # Create a minimal mock object to avoid AsyncMock warnings
+        class MockCoordinator:
+            def __init__(self, device):
+                self.device = device
+                self.last_update_success = True
+                self.restart_called = False
+
+            def get_device(self, device_uuid):
+                return self.device
+
+            async def async_restart_application(self, device_uuid):
+                self.restart_called = True
+                return True
+
+        coordinator = MockCoordinator(mock_device_with_metrics)
 
         # Test restart button
         restart_button_desc = BUTTON_TYPES[0]  # Assuming first is restart
@@ -575,7 +611,7 @@ class TestEntityPlatformsUnit:
 
         # Test button press
         await button.async_press()
-        coordinator.async_restart_application.assert_called_once()
+        assert coordinator.restart_called is True
 
     @pytest.mark.asyncio
     async def test_entity_device_info_creation(self, mock_device_with_metrics):
@@ -604,8 +640,8 @@ class TestEntityPlatformsUnit:
         """Test entity availability when errors occur."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
-        coordinator.get_device.return_value = None  # Simulate device not found
+        coordinator = AsyncMock()  # Use AsyncMock for async methods
+        coordinator.get_device = MagicMock(return_value=None)  # Simulate device not found
 
         sensor = BalenaCloudSensorEntity(
             coordinator=coordinator,
@@ -827,8 +863,8 @@ class TestErrorHandlingUnit:
         """Test entity availability when errors occur."""
         from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
-        coordinator = MagicMock()  # Use MagicMock, not AsyncMock for sync methods
-        coordinator.get_device.return_value = None  # Simulate device not found
+        coordinator = AsyncMock()  # Use AsyncMock for async methods
+        coordinator.get_device = MagicMock(return_value=None)  # Simulate device not found
 
         sensor = BalenaCloudSensorEntity(
             coordinator=coordinator,
