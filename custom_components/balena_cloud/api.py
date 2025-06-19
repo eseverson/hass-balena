@@ -98,17 +98,23 @@ class BalenaCloudAPIClient:
         self._balena = await loop.run_in_executor(None, _init_balena)
         self._initialized = True
 
-    async def _run_in_executor(self, func, *args, **kwargs):
+    async def _run_in_executor(self, method_path: str, *args, **kwargs):
         """Run synchronous balena SDK calls in executor."""
         await self._ensure_initialized()
+
+        # Navigate to the method using the path (e.g., "models.application.get_all")
+        method = self._balena
+        for attr in method_path.split('.'):
+            method = getattr(method, attr)
+
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
+        return await loop.run_in_executor(None, lambda: method(*args, **kwargs))
 
     @async_retry()
     async def async_get_user_info(self) -> Dict[str, Any]:
         """Get current user information."""
         try:
-            user_info = await self._run_in_executor(self._balena.auth.get_user_info)
+            user_info = await self._run_in_executor("auth.get_user_info")
             return user_info
         except (
             balena_exceptions.MalformedToken,
@@ -124,9 +130,7 @@ class BalenaCloudAPIClient:
     async def async_get_fleets(self) -> List[Dict[str, Any]]:
         """Get all accessible fleets (applications)."""
         try:
-            applications = await self._run_in_executor(
-                self._balena.models.application.get_all
-            )
+            applications = await self._run_in_executor("models.application.get_all")
             return applications
         except (
             balena_exceptions.MalformedToken,
@@ -142,9 +146,7 @@ class BalenaCloudAPIClient:
     async def async_get_fleet(self, fleet_id: int) -> Dict[str, Any]:
         """Get fleet information by ID."""
         try:
-            application = await self._run_in_executor(
-                self._balena.models.application.get, fleet_id
-            )
+            application = await self._run_in_executor("models.application.get", fleet_id)
             return application
         except balena_exceptions.ApplicationNotFound:
             _LOGGER.warning("Fleet with ID %s not found", fleet_id)
@@ -166,13 +168,9 @@ class BalenaCloudAPIClient:
         """Get devices, optionally filtered by fleet."""
         try:
             if fleet_id:
-                devices = await self._run_in_executor(
-                    self._balena.models.device.get_all_by_application, fleet_id
-                )
+                devices = await self._run_in_executor("models.device.get_all_by_application", fleet_id)
             else:
-                devices = await self._run_in_executor(
-                    self._balena.models.device.get_all
-                )
+                devices = await self._run_in_executor("models.device.get_all")
             return devices
         except balena_exceptions.ApplicationNotFound:
             _LOGGER.warning("Fleet with ID %s not found", fleet_id)
@@ -191,9 +189,7 @@ class BalenaCloudAPIClient:
     async def async_get_device(self, device_uuid: str) -> Dict[str, Any]:
         """Get device information by UUID."""
         try:
-            device = await self._run_in_executor(
-                self._balena.models.device.get, device_uuid
-            )
+            device = await self._run_in_executor("models.device.get", device_uuid)
             return device
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -237,9 +233,7 @@ class BalenaCloudAPIClient:
         try:
             # The balena-sdk doesn't have direct metrics API
             # but we can get some basic status information
-            device = await self._run_in_executor(
-                self._balena.models.device.get, device_uuid
-            )
+            device = await self._run_in_executor("models.device.get", device_uuid)
 
             # Extract what metrics we can from device status
             metrics = {
@@ -262,9 +256,7 @@ class BalenaCloudAPIClient:
     ) -> List[Dict[str, Any]]:
         """Get services running on a device."""
         try:
-            services = await self._run_in_executor(
-                self._balena.models.service.get_all_by_device, device_uuid
-            )
+            services = await self._run_in_executor("models.service.get_all_by_device", device_uuid)
             return services
         except Exception as err:
             _LOGGER.debug("Failed to get device services for %s: %s", device_uuid, err)
@@ -278,16 +270,10 @@ class BalenaCloudAPIClient:
         try:
             if service_name:
                 # Restart specific service
-                await self._run_in_executor(
-                    self._balena.models.device.restart_service,
-                    device_uuid,
-                    service_name,
-                )
+                await self._run_in_executor("models.device.restart_service", device_uuid, service_name)
             else:
                 # Restart all services
-                await self._run_in_executor(
-                    self._balena.models.device.restart_application, device_uuid
-                )
+                await self._run_in_executor("models.device.restart_application", device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -302,7 +288,7 @@ class BalenaCloudAPIClient:
     async def async_reboot_device(self, device_uuid: str) -> bool:
         """Reboot a device."""
         try:
-            await self._run_in_executor(self._balena.models.device.reboot, device_uuid)
+            await self._run_in_executor("models.device.reboot", device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -317,9 +303,7 @@ class BalenaCloudAPIClient:
     async def async_shutdown_device(self, device_uuid: str) -> bool:
         """Shutdown a device."""
         try:
-            await self._run_in_executor(
-                self._balena.models.device.shutdown, device_uuid
-            )
+            await self._run_in_executor("models.device.shutdown", device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -336,9 +320,7 @@ class BalenaCloudAPIClient:
     ) -> List[Dict[str, Any]]:
         """Get environment variables for a device."""
         try:
-            env_vars = await self._run_in_executor(
-                self._balena.models.environment_variables.device.get_all, device_uuid
-            )
+            env_vars = await self._run_in_executor("models.environment_variables.device.get_all", device_uuid)
             return env_vars
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -357,12 +339,7 @@ class BalenaCloudAPIClient:
     ) -> bool:
         """Set an environment variable for a device."""
         try:
-            await self._run_in_executor(
-                self._balena.models.environment_variables.device.create,
-                device_uuid,
-                name,
-                value,
-            )
+            await self._run_in_executor("models.environment_variables.device.create", device_uuid, name, value)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -393,19 +370,10 @@ class BalenaCloudAPIClient:
                     if name in existing_dict:
                         # Update existing variable
                         var_id = existing_dict[name]["id"]
-                        await self._run_in_executor(
-                            self._balena.models.environment_variables.device.update,
-                            var_id,
-                            value,
-                        )
+                        await self._run_in_executor("models.environment_variables.device.update", var_id, value)
                     else:
                         # Create new variable
-                        await self._run_in_executor(
-                            self._balena.models.environment_variables.device.create,
-                            device_uuid,
-                            name,
-                            value,
-                        )
+                        await self._run_in_executor("models.environment_variables.device.create", device_uuid, name, value)
                 except Exception as var_err:
                     _LOGGER.error("Failed to update variable %s: %s", name, var_err)
                     success = False
@@ -433,9 +401,7 @@ class BalenaCloudAPIClient:
     async def async_enable_device_url(self, device_uuid: str) -> bool:
         """Enable public device URL."""
         try:
-            await self._run_in_executor(
-                self._balena.models.device.enable_device_url, device_uuid
-            )
+            await self._run_in_executor("models.device.enable_device_url", device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -450,9 +416,7 @@ class BalenaCloudAPIClient:
     async def async_disable_device_url(self, device_uuid: str) -> bool:
         """Disable public device URL."""
         try:
-            await self._run_in_executor(
-                self._balena.models.device.disable_device_url, device_uuid
-            )
+            await self._run_in_executor("models.device.disable_device_url", device_uuid)
             return True
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
@@ -467,9 +431,7 @@ class BalenaCloudAPIClient:
     async def async_get_device_url(self, device_uuid: str) -> Optional[str]:
         """Get the public device URL."""
         try:
-            url = await self._run_in_executor(
-                self._balena.models.device.get_device_url, device_uuid
-            )
+            url = await self._run_in_executor("models.device.get_device_url", device_uuid)
             return url
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
