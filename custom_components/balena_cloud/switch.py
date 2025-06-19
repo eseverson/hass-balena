@@ -3,18 +3,33 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (ATTR_DEVICE_NAME, ATTR_DEVICE_TYPE, ATTR_DEVICE_UUID,
-                    ATTR_FLEET_NAME, DOMAIN)
+from .const import (
+    ATTR_DEVICE_NAME,
+    ATTR_DEVICE_TYPE,
+    ATTR_DEVICE_UUID,
+    ATTR_FLEET_ID,
+    ATTR_FLEET_NAME,
+    ATTR_IS_ONLINE,
+    ATTR_LAST_SEEN,
+    ATTR_OS_VERSION,
+    ATTR_SUPERVISOR_VERSION,
+    DOMAIN,
+    ICON_DEVICE,
+    ICON_FLEET,
+)
 from .coordinator import BalenaCloudDataUpdateCoordinator
+from .device_registry import async_ensure_fleet_device
 from .models import BalenaDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,14 +40,26 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Balena Cloud switch platform."""
+    """Set up Balena Cloud switches from a config entry."""
     coordinator: BalenaCloudDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.entry_id
     ]
 
-    switches = []
+    # Ensure fleet devices exist in the device registry
+    for fleet in coordinator.fleets.values():
+        await async_ensure_fleet_device(hass, fleet)
+
+    switches: list[BalenaCloudSwitchEntity] = []
+
     for device_uuid, device in coordinator.devices.items():
-        switches.append(BalenaCloudPublicUrlSwitch(coordinator, device_uuid))
+        for description in SWITCH_TYPES:
+            switches.append(
+                BalenaCloudSwitchEntity(
+                    coordinator=coordinator,
+                    description=description,
+                    device_uuid=device_uuid,
+                )
+            )
 
     async_add_entities(switches)
 
@@ -102,18 +129,18 @@ class BalenaCloudSwitchEntity(
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        """Return device information about this entity."""
-        if not self.device:
+        """Return device info."""
+        if not (device := self.device):
             return None
 
         return DeviceInfo(
-            identifiers={(DOMAIN, self.device.uuid)},
-            name=self.device.display_name,
+            identifiers={(DOMAIN, device.uuid)},
+            name=device.display_name,
             manufacturer="Balena",
-            model=self.device.device_type,
-            sw_version=self.device.os_version,
-            configuration_url=f"https://dashboard.balena-cloud.com/devices/{self.device.uuid}",
-            via_device=(DOMAIN, f"fleet_{self.device.fleet_id}"),
+            model=device.device_type,
+            sw_version=device.os_version,
+            configuration_url=f"https://dashboard.balena-cloud.com/devices/{device.uuid}",
+            via_device=(DOMAIN, f"fleet_{device.fleet_id}"),
         )
 
 
