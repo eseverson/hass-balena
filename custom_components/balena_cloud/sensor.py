@@ -163,7 +163,7 @@ async def async_setup_entry(
 
     # Ensure fleet devices exist in the device registry
     for fleet in coordinator.fleets.values():
-        await async_ensure_fleet_device(hass, fleet)
+        await async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
 
     entities: list[BalenaCloudSensorEntity] = []
 

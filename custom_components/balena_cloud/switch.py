@@ -38,11 +38,17 @@ async def async_setup_entry(
 
     # Ensure fleet devices exist in the device registry
     for fleet in coordinator.fleets.values():
-        await async_ensure_fleet_device(hass, fleet)
+        await async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
 
-    switches = []
+    switches: list[BalenaCloudPublicUrlSwitch] = []
+
     for device_uuid, device in coordinator.devices.items():
-        switches.append(BalenaCloudPublicUrlSwitch(coordinator, device_uuid))
+        switches.append(
+            BalenaCloudPublicUrlSwitch(
+                coordinator=coordinator,
+                device_uuid=device_uuid,
+            )
+        )
 
     async_add_entities(switches)
 

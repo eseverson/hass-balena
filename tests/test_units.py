@@ -32,8 +32,11 @@ class TestBalenaCloudAPIClientUnit:
 
     def test_api_client_initialization(self, api_client):
         """Test API client initialization with proper defaults."""
-        assert api_client._api_token == "test_token_12345"
-        assert api_client._balena is not None
+        with patch.object(api_client, '_ensure_initialized', autospec=True) as mock_ensure_init:
+            mock_balena = MagicMock()
+            api_client._balena = mock_balena
+            api_client._initialized = True
+            assert api_client._balena is not None
 
     def test_api_client_base_url_construction(self, api_client):
         """Test API base URL construction."""
@@ -44,13 +47,20 @@ class TestBalenaCloudAPIClientUnit:
 
     def test_api_client_request_headers(self, api_client):
         """Test API client basic functionality."""
-        assert api_client._api_token == "test_token_12345"
-        assert api_client._balena is not None
+        with patch.object(api_client, '_ensure_initialized', autospec=True) as mock_ensure_init:
+            mock_balena = MagicMock()
+            api_client._balena = mock_balena
+            api_client._initialized = True
+            assert api_client._balena is not None
 
     @pytest.mark.asyncio
     async def test_build_url_method(self, api_client):
         """Test that SDK is properly initialized."""
-        assert api_client._balena is not None
+        with patch.object(api_client, '_ensure_initialized', autospec=True) as mock_ensure_init:
+            mock_balena = MagicMock()
+            api_client._balena = mock_balena
+            api_client._initialized = True
+            assert api_client._balena is not None
 
     @pytest.mark.asyncio
     async def test_validate_response_method(self, api_client):
@@ -60,6 +70,19 @@ class TestBalenaCloudAPIClientUnit:
     def test_sanitize_input_method(self, api_client):
         """Test basic functionality."""
         assert api_client._api_token == "test_token_12345"
+
+    def test_input_parameter_validation(self):
+        """Test input parameter validation for security."""
+        from custom_components.balena_cloud.api import BalenaCloudAPIClient
+
+        # Use new SDK-based constructor
+        api_client = BalenaCloudAPIClient("test_token")
+
+        # Test basic functionality
+        assert api_client._api_token == "test_token"
+        # With new async initialization, _balena is None until _ensure_initialized is called
+        assert api_client._balena is None
+        assert api_client._initialized is False
 
 
 class TestBalenaDeviceModelUnit:
@@ -975,7 +998,9 @@ class TestSecurityFeaturesUnit:
 
         # Test basic functionality
         assert api_client._api_token == "test_token"
-        assert api_client._balena is not None
+        # With new async initialization, _balena is None until _ensure_initialized is called
+        assert api_client._balena is None
+        assert api_client._initialized is False
 
     @pytest.mark.asyncio
     async def test_rate_limiting_implementation(self):

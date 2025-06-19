@@ -24,16 +24,21 @@ def async_get_fleet_device_info(fleet: BalenaFleet) -> DeviceInfo:
 
 
 async def async_ensure_fleet_device(
-    hass: HomeAssistant, fleet: BalenaFleet
+    hass: HomeAssistant, fleet: BalenaFleet, config_entry_id: str | None = None
 ) -> dr.DeviceEntry | None:
     """Ensure a fleet device exists in the device registry.
+
+    Args:
+        hass: Home Assistant instance
+        fleet: Fleet to create device for
+        config_entry_id: Config entry ID to associate with the device
 
     Returns None if the device registry is not available (e.g., in test environments).
     """
     try:
         device_registry = dr.async_get(hass)
         return device_registry.async_get_or_create(
-            config_entry_id=None,  # Will be set by the config entry
+            config_entry_id=config_entry_id,
             identifiers={(DOMAIN, f"fleet_{fleet.id}")},
             name=fleet.display_name,
             manufacturer="Balena",

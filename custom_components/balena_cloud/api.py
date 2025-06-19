@@ -78,13 +78,29 @@ class BalenaCloudAPIClient:
     def __init__(self, api_token: str) -> None:
         """Initialize the API client."""
         self._api_token = api_token
-        self._balena = Balena()
+        self._balena = None
+        self._initialized = False
 
-        # Set the API token
-        self._balena.auth.login_with_token(api_token)
+    async def _ensure_initialized(self):
+        """Ensure the Balena SDK is initialized."""
+        if not self._initialized:
+            await self._initialize_balena()
+
+    async def _initialize_balena(self):
+        """Initialize the Balena SDK in a thread executor."""
+        loop = asyncio.get_event_loop()
+
+        def _init_balena():
+            balena = Balena()
+            balena.auth.login_with_token(self._api_token)
+            return balena
+
+        self._balena = await loop.run_in_executor(None, _init_balena)
+        self._initialized = True
 
     async def _run_in_executor(self, func, *args, **kwargs):
         """Run synchronous balena SDK calls in executor."""
+        await self._ensure_initialized()
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
 
@@ -276,7 +292,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to restart application on %s: %s", device_uuid, err)
@@ -291,7 +307,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to reboot device %s: %s", device_uuid, err)
@@ -308,7 +324,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to shutdown device %s: %s", device_uuid, err)
@@ -327,7 +343,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return []
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error(
@@ -351,7 +367,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error(
@@ -424,7 +440,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to enable device URL for %s: %s", device_uuid, err)
@@ -441,7 +457,7 @@ class BalenaCloudAPIClient:
         except balena_exceptions.DeviceNotFound:
             _LOGGER.warning("Device with UUID %s not found", device_uuid)
             return False
-        except balena_exceptions.InvalidToken as err:
+        except balena_exceptions.MalformedToken as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
             _LOGGER.error("Failed to disable device URL for %s: %s", device_uuid, err)
