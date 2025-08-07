@@ -185,6 +185,17 @@ class TestAPIIntegrationScenarios:
     def coordinator_setup(self, mock_hass, mock_config_entry):
         """Set up coordinator for integration testing."""
         from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
+        # Ensure frame helper is initialized for this hass
+        from homeassistant.helpers import frame as ha_frame
+        import threading, asyncio
+        mock_hass.loop_thread_id = threading.get_ident()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        mock_hass.loop = loop
+        ha_frame.async_setup(mock_hass)
 
         return BalenaCloudDataUpdateCoordinator(
             mock_hass,

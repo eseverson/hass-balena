@@ -315,6 +315,18 @@ class TestBalenaCloudDataUpdateCoordinatorUnit:
         """Set up mock coordinator for testing."""
         mock_hass = AsyncMock()
 
+        # Ensure Home Assistant frame helper is set up for DataUpdateCoordinator
+        from homeassistant.helpers import frame as ha_frame
+        import threading, asyncio
+        mock_hass.loop_thread_id = threading.get_ident()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        mock_hass.loop = loop
+        ha_frame.async_setup(mock_hass)
+
         config_data = {
             "api_token": "test_token_12345",
             "fleets": [1001, 1002],

@@ -193,6 +193,18 @@ class MockHomeAssistant:
         # But async_forward_entry_setups is actually awaited
         self.config_entries.async_forward_entry_setups = AsyncMock()
 
+        # Initialize Home Assistant frame helper and loop attributes for tests
+        from homeassistant.helpers import frame as ha_frame
+        import threading, asyncio
+        self.loop_thread_id = threading.get_ident()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        self.loop = loop
+        ha_frame.async_setup(self)
+
     async def async_block_till_done(self):
         """Mock async_block_till_done."""
         pass
@@ -287,6 +299,18 @@ def mock_coordinator_setup():
     from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
 
     mock_hass = AsyncMock()
+
+    # Ensure Home Assistant frame helper is set up for DataUpdateCoordinator
+    from homeassistant.helpers import frame as ha_frame
+    import threading, asyncio
+    mock_hass.loop_thread_id = threading.get_ident()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    mock_hass.loop = loop
+    ha_frame.async_setup(mock_hass)
 
     config_data = {
         "api_token": "test_token_12345",

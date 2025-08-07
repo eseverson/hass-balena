@@ -56,6 +56,7 @@ This development plan outlines the comprehensive roadmap for building a HACS plu
   - HTTP client setup with proper headers and authentication
   - Token validation and error handling
   - Rate limiting and retry logic implementation
+  - **FIXED**: Runtime NoneType attribute error by refactoring _run_in_executor to use string method paths
 - [x] Create secure credential storage system
   - Integration with Home Assistant's credential manager
   - Token encryption and secure storage
@@ -92,6 +93,7 @@ This development plan outlines the comprehensive roadmap for building a HACS plu
   - Device information mapping from Balena to Home Assistant
   - Device relationship management (fleet to devices)
   - Device lifecycle management (addition/removal)
+  - **FIXED**: Device registry warnings by properly associating config entry IDs
 
 ## ✅ COMPLETED: 3. Feature-specific Backend
 
