@@ -205,31 +205,132 @@ class BalenaCloudOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         super().__init__()
+        self.fleets: Dict[str, str] = {}
 
     async def async_step_init(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+        errors: Dict[str, str] = {}
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
+        # Fetch fleets if not already done (non-blocking)
+        if not self.fleets:
+            try:
+                await self._async_fetch_fleets()
+            except Exception as err:  # pylint: disable=broad-except
+                _LOGGER.warning("Failed to fetch fleets for options flow: %s", err)
+                # Continue without fleet selection
+
+        if user_input is not None:
+            try:
+                # Get current fleet selection from entry.data
+                current_fleets = self.config_entry.data.get(CONF_FLEETS, [])
+                # Only update fleet selection if it was provided in user_input
+                if CONF_FLEETS in user_input:
+                    selected_fleets = user_input.get(CONF_FLEETS, current_fleets)
+                else:
+                    selected_fleets = current_fleets
+
+                # Update the config entry data with new fleet selection
+                # and options with other settings
+                new_data = {**self.config_entry.data, CONF_FLEETS: selected_fleets}
+                new_options = {
+                    CONF_UPDATE_INTERVAL: user_input.get(
                         CONF_UPDATE_INTERVAL,
-                        default=self.config_entry.options.get(
+                        self.config_entry.options.get(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
-                    vol.Optional(
+                    ),
+                    CONF_INCLUDE_OFFLINE_DEVICES: user_input.get(
                         CONF_INCLUDE_OFFLINE_DEVICES,
-                        default=self.config_entry.options.get(
+                        self.config_entry.options.get(
                             CONF_INCLUDE_OFFLINE_DEVICES,
                             DEFAULT_INCLUDE_OFFLINE_DEVICES,
                         ),
-                    ): bool,
+                    ),
                 }
-            ),
+
+                # Update both data and options
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=new_data, options=new_options
+                )
+
+                # Request reload to apply changes
+                # Use our custom reload function which handles unload gracefully
+                try:
+                    from . import async_reload_entry
+                    self.hass.async_create_task(
+                        async_reload_entry(self.hass, self.config_entry)
+                    )
+                except Exception as reload_err:  # pylint: disable=broad-except
+                    _LOGGER.warning("Failed to trigger reload: %s", reload_err)
+
+                return self.async_create_entry(title="", data={})
+
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        # Get current selections
+        current_fleets = self.config_entry.data.get(CONF_FLEETS, [])
+        if not current_fleets and self.fleets:
+            # If no fleets selected, default to all fleets
+            current_fleets = list(self.fleets.keys())
+
+        # Create fleet selection schema
+        fleet_options = {}
+        if self.fleets:
+            fleet_options = {
+                str(fleet_id): f"{fleet_name} (ID: {fleet_id})"
+                for fleet_id, fleet_name in self.fleets.items()
+            }
+
+        schema_dict = {
+            vol.Optional(
+                CONF_UPDATE_INTERVAL,
+                default=self.config_entry.options.get(
+                    CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                ),
+            ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
+            vol.Optional(
+                CONF_INCLUDE_OFFLINE_DEVICES,
+                default=self.config_entry.options.get(
+                    CONF_INCLUDE_OFFLINE_DEVICES,
+                    DEFAULT_INCLUDE_OFFLINE_DEVICES,
+                ),
+            ): bool,
+        }
+
+        # Add fleet selection if we have fleets
+        if fleet_options:
+            schema_dict[
+                vol.Optional(CONF_FLEETS, default=current_fleets)
+            ] = vol.All(cv.multi_select(fleet_options), vol.Length(min=0))
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(schema_dict),
+            errors=errors,
         )
+
+    async def _async_fetch_fleets(self) -> None:
+        """Fetch available fleets."""
+        api_token = self.config_entry.data.get(CONF_API_TOKEN)
+        if not api_token:
+            _LOGGER.warning("No API token found in config entry")
+            return
+
+        try:
+            api = BalenaCloudAPIClient(api_token)
+            fleets_data = await api.async_get_fleets()
+            self.fleets = {
+                str(fleet["id"]): fleet["app_name"]
+                for fleet in fleets_data
+                if fleet.get("id") and fleet.get("app_name")
+            }
+            _LOGGER.debug("Fetched %d fleets for options flow", len(self.fleets))
+
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.warning("Failed to fetch fleets: %s", err)
+            # Don't raise - allow options flow to continue without fleet selection
+            self.fleets = {}

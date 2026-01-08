@@ -168,9 +168,13 @@ class BalenaCloudAPIClient:
         """Get devices, optionally filtered by fleet."""
         try:
             if fleet_id:
+                _LOGGER.debug("Fetching devices for fleet ID: %s", fleet_id)
                 devices = await self._run_in_executor("models.device.get_all_by_application", fleet_id)
+                _LOGGER.debug("API returned %d devices for fleet ID %s", len(devices), fleet_id)
             else:
+                _LOGGER.debug("Fetching all devices (no fleet filter)")
                 devices = await self._run_in_executor("models.device.get_all")
+                _LOGGER.debug("API returned %d total devices", len(devices))
             return devices
         except balena_exceptions.ApplicationNotFound:
             _LOGGER.warning("Fleet with ID %s not found", fleet_id)
@@ -182,7 +186,7 @@ class BalenaCloudAPIClient:
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
         except Exception as err:
-            _LOGGER.error("Failed to get devices: %s", err)
+            _LOGGER.error("Failed to get devices: %s", err, exc_info=True)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err
 
     @async_retry()
@@ -256,8 +260,28 @@ class BalenaCloudAPIClient:
     ) -> List[Dict[str, Any]]:
         """Get services running on a device."""
         try:
-            services = await self._run_in_executor("models.service.get_all_by_device", device_uuid)
-            return services
+            # Use get_with_service_details to get device info with services
+            device_info = await self._run_in_executor("models.device.get_with_service_details", device_uuid)
+            
+            # Extract services from current_services field
+            current_services = device_info.get("current_services", {})
+            
+            # Convert the services dict to a list format
+            services_list = []
+            for service_name, service_details_list in current_services.items():
+                # service_details_list is a list of service instances
+                for service_detail in service_details_list:
+                    services_list.append({
+                        "service_name": service_name,
+                        "id": service_detail.get("id"),
+                        "image_id": service_detail.get("image_id"),
+                        "release_id": service_detail.get("release_id"),
+                        "status": service_detail.get("status"),
+                        "created_at": service_detail.get("created_at"),
+                        "updated_at": service_detail.get("updated_at"),
+                    })
+            
+            return services_list
         except Exception as err:
             _LOGGER.debug("Failed to get device services for %s: %s", device_uuid, err)
             return []

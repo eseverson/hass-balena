@@ -40,17 +40,42 @@ async def async_setup_entry(
     for fleet in coordinator.fleets.values():
         await async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
 
-    switches: list[BalenaCloudPublicUrlSwitch] = []
+    # Track known devices to avoid duplicates
+    known_devices: set[str] = set()
+    known_fleets: set[int] = {fleet.id for fleet in coordinator.fleets.values()}
 
-    for device_uuid, device in coordinator.devices.items():
-        switches.append(
-            BalenaCloudPublicUrlSwitch(
-                coordinator=coordinator,
-                device_uuid=device_uuid,
-            )
-        )
+    def _check_for_new_devices() -> None:
+        """Check for new devices and add entities for them."""
+        # Ensure fleet devices exist for newly discovered fleets
+        for fleet in coordinator.fleets.values():
+            if fleet.id not in known_fleets:
+                known_fleets.add(fleet.id)
+                hass.async_create_task(
+                    async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
+                )
 
-    async_add_entities(switches)
+        new_switches: list[BalenaCloudPublicUrlSwitch] = []
+
+        for device_uuid, device in coordinator.devices.items():
+            if device_uuid not in known_devices:
+                known_devices.add(device_uuid)
+                new_switches.append(
+                    BalenaCloudPublicUrlSwitch(
+                        coordinator=coordinator,
+                        device_uuid=device_uuid,
+                    )
+                )
+
+        if new_switches:
+            async_add_entities(new_switches)
+
+    # Check for devices initially
+    _check_for_new_devices()
+
+    # Listen for coordinator updates to add entities for newly discovered devices
+    config_entry.async_on_unload(
+        coordinator.async_add_listener(_check_for_new_devices)
+    )
 
 
 class BalenaCloudPublicUrlSwitch(

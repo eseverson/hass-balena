@@ -197,10 +197,14 @@ class TestAPIIntegrationScenarios:
         mock_hass.loop = loop
         ha_frame.async_setup(mock_hass)
 
+        # Ensure include_offline_devices is True for tests
+        options = mock_config_entry["options"].copy()
+        options["include_offline_devices"] = True
+
         return BalenaCloudDataUpdateCoordinator(
             mock_hass,
             mock_config_entry["data"],
-            mock_config_entry["options"],
+            options,
         )
 
     @pytest.mark.asyncio
@@ -216,7 +220,8 @@ class TestAPIIntegrationScenarios:
             mock_get_devices.return_value = mock_balena_api_response["devices"]
             mock_get_status.side_effect = lambda uuid: {
                 "device": next((d for d in mock_balena_api_response["devices"] if d["uuid"] == uuid), {}),
-                "metrics": mock_balena_api_response["device_metrics"].get(uuid, {})
+                "metrics": mock_balena_api_response["device_metrics"].get(uuid, {}),
+                "services": []  # Services are now included in device status
             }
 
             data = await coordinator._async_update_data()
@@ -257,6 +262,9 @@ class TestAPIIntegrationScenarios:
     async def test_large_dataset_handling(self, coordinator_setup, performance_test_data):
         """Test handling of large datasets."""
         coordinator = coordinator_setup
+        
+        # Clear selected fleets to ensure all devices are included
+        coordinator.selected_fleets = []
 
         with patch.object(coordinator.api, "async_get_fleets") as mock_get_fleets, \
              patch.object(coordinator.api, "async_get_devices") as mock_get_devices, \
@@ -264,7 +272,7 @@ class TestAPIIntegrationScenarios:
 
             mock_get_fleets.return_value = performance_test_data["fleets"]
             mock_get_devices.return_value = performance_test_data["devices"]
-            mock_get_status.return_value = {"device": {}, "metrics": {}}
+            mock_get_status.return_value = {"device": {}, "metrics": {}, "services": []}
 
             start_time = datetime.now()
             data = await coordinator._async_update_data()
@@ -274,6 +282,7 @@ class TestAPIIntegrationScenarios:
             assert processing_time < 30
 
             assert len(data["fleets"]) == 50
+            # With include_offline_devices=True, all 1000 devices should be included
             assert len(data["devices"]) == 1000
 
 

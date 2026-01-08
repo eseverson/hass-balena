@@ -82,19 +82,45 @@ async def async_setup_entry(
     for fleet in coordinator.fleets.values():
         await async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
 
-    entities: list[BalenaCloudButtonEntity] = []
+    # Track known device/description combinations to avoid duplicates
+    known_entities: set[tuple[str, str]] = set()
+    known_fleets: set[int] = {fleet.id for fleet in coordinator.fleets.values()}
 
-    for device_uuid, device in coordinator.devices.items():
-        for description in BUTTON_TYPES:
-            entities.append(
-                BalenaCloudButtonEntity(
-                    coordinator=coordinator,
-                    description=description,
-                    device_uuid=device_uuid,
+    def _check_for_new_devices() -> None:
+        """Check for new devices and add entities for them."""
+        # Ensure fleet devices exist for newly discovered fleets
+        for fleet in coordinator.fleets.values():
+            if fleet.id not in known_fleets:
+                known_fleets.add(fleet.id)
+                hass.async_create_task(
+                    async_ensure_fleet_device(hass, fleet, config_entry.entry_id)
                 )
-            )
 
-    async_add_entities(entities)
+        new_entities: list[BalenaCloudButtonEntity] = []
+
+        for device_uuid, device in coordinator.devices.items():
+            for description in BUTTON_TYPES:
+                entity_key = (device_uuid, description.key)
+                if entity_key not in known_entities:
+                    known_entities.add(entity_key)
+                    new_entities.append(
+                        BalenaCloudButtonEntity(
+                            coordinator=coordinator,
+                            description=description,
+                            device_uuid=device_uuid,
+                        )
+                    )
+
+        if new_entities:
+            async_add_entities(new_entities)
+
+    # Check for devices initially
+    _check_for_new_devices()
+
+    # Listen for coordinator updates to add entities for newly discovered devices
+    config_entry.async_on_unload(
+        coordinator.async_add_listener(_check_for_new_devices)
+    )
 
 
 class BalenaCloudButtonEntity(

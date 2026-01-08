@@ -94,6 +94,10 @@ class TestHomeAssistantIntegration:
             result = await async_unload_entry(hass, config_entry)
 
             assert result is True
+            
+            # Test unload when entry is not loaded (should return True gracefully)
+            result = await async_unload_entry(hass, config_entry)
+            assert result is True
             assert config_entry.entry_id not in hass.data[DOMAIN]
 
     @pytest.mark.asyncio
@@ -276,29 +280,37 @@ class TestEntityPlatformIntegration:
         # Collect all created entities
         all_entities = []
 
+        # Mock async_on_unload for config_entry (needed for dynamic entity discovery)
+        config_entry.async_on_unload = MagicMock()
+
         # Set up sensor entities
         with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_sensors:
             await sensor_setup(hass, config_entry, mock_add_sensors)
-            sensor_entities = mock_add_sensors.call_args[0][0]
-            all_entities.extend(sensor_entities)
+            # Entities are added initially, and also via listener callback
+            if mock_add_sensors.called:
+                sensor_entities = mock_add_sensors.call_args[0][0] if mock_add_sensors.call_args else []
+                all_entities.extend(sensor_entities)
 
         # Set up binary sensor entities
         with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_binary_sensors:
             await binary_sensor_setup(hass, config_entry, mock_add_binary_sensors)
-            binary_sensor_entities = mock_add_binary_sensors.call_args[0][0]
-            all_entities.extend(binary_sensor_entities)
+            if mock_add_binary_sensors.called:
+                binary_sensor_entities = mock_add_binary_sensors.call_args[0][0] if mock_add_binary_sensors.call_args else []
+                all_entities.extend(binary_sensor_entities)
 
         # Set up button entities
         with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_buttons:
             await button_setup(hass, config_entry, mock_add_buttons)
-            button_entities = mock_add_buttons.call_args[0][0]
-            all_entities.extend(button_entities)
+            if mock_add_buttons.called:
+                button_entities = mock_add_buttons.call_args[0][0] if mock_add_buttons.call_args else []
+                all_entities.extend(button_entities)
 
         # Set up switch entities
         with patch("homeassistant.helpers.entity_platform.AddEntitiesCallback") as mock_add_switches:
             await switch_setup(hass, config_entry, mock_add_switches)
-            switch_entities = mock_add_switches.call_args[0][0]
-            all_entities.extend(switch_entities)
+            if mock_add_switches.called:
+                switch_entities = mock_add_switches.call_args[0][0] if mock_add_switches.call_args else []
+                all_entities.extend(switch_entities)
 
         # Define expected entities per device
         expected_sensors_per_device = [

@@ -53,10 +53,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading Balena Cloud integration")
 
+    # Check if entry is actually loaded before trying to unload
+    if entry.entry_id not in hass.data.get(DOMAIN, {}):
+        _LOGGER.debug("Entry %s not loaded, skipping unload", entry.entry_id)
+        return True
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(entry.entry_id, None)
 
     _LOGGER.info("Balena Cloud integration unloaded")
     return unload_ok
