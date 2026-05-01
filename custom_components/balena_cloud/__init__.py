@@ -7,6 +7,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import BalenaCloudDataUpdateCoordinator
@@ -29,7 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create and store coordinator
     coordinator = BalenaCloudDataUpdateCoordinator(
-        hass, dict(entry.data), dict(entry.options)
+        hass, entry, dict(entry.data), dict(entry.options)
     )
 
     # Perform initial data fetch
@@ -71,3 +72,33 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Allow the user to remove a device that no longer exists in Balena Cloud."""
+    coordinator: BalenaCloudDataUpdateCoordinator | None = hass.data.get(
+        DOMAIN, {}
+    ).get(config_entry.entry_id)
+
+    if coordinator is None:
+        return True
+
+    for domain, identifier in device_entry.identifiers:
+        if domain != DOMAIN:
+            continue
+        if identifier.startswith("fleet_"):
+            try:
+                fleet_id = int(identifier.removeprefix("fleet_"))
+            except ValueError:
+                continue
+            if fleet_id in coordinator.fleets:
+                return False
+        else:
+            if identifier in coordinator.devices:
+                return False
+
+    return True

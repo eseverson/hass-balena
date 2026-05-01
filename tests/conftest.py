@@ -322,9 +322,12 @@ def mock_coordinator_setup():
         "include_offline_devices": True,
     }
 
-    # Create coordinator with correct constructor signature (3 args: hass, config_data, options)
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_id"
+
     coordinator = BalenaCloudDataUpdateCoordinator(
         mock_hass,
+        mock_entry,
         config_data,
         config_options,
     )

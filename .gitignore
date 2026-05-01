@@ -156,3 +156,4 @@ Thumbs.db
 test_config/
 *.tmp
 *.bak
+.claude

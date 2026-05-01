@@ -6,7 +6,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator,
                                                       UpdateFailed)
 
@@ -24,10 +26,12 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
+        entry: ConfigEntry,
         config_data: Dict[str, Any],
         options: Dict[str, Any],
     ) -> None:
         """Initialize the coordinator."""
+        self.entry = entry
         self.api_token = config_data[CONF_API_TOKEN]
         self.selected_fleets = config_data.get(CONF_FLEETS, [])
         self.include_offline_devices = options.get(CONF_INCLUDE_OFFLINE_DEVICES, True)
@@ -62,6 +66,15 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Fetch devices for selected fleets
             await self._async_update_devices()
+
+            # Prune HA device registry entries for fleets/devices that no
+            # longer exist in Balena Cloud (or are no longer selected).
+            try:
+                self._cleanup_stale_devices()
+            except Exception as cleanup_err:  # pragma: no cover - best effort
+                _LOGGER.debug(
+                    "Failed to clean up stale devices: %s", cleanup_err
+                )
 
             # Return combined data
             return {
@@ -200,6 +213,41 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Failed to update devices: %s", err)
             raise
+
+    def _cleanup_stale_devices(self) -> None:
+        """Remove HA device registry entries no longer present in Balena Cloud."""
+        device_registry = dr.async_get(self.hass)
+        entries = dr.async_entries_for_config_entry(
+            device_registry, self.entry.entry_id
+        )
+
+        for device_entry in entries:
+            stale = False
+            for domain, identifier in device_entry.identifiers:
+                if domain != DOMAIN:
+                    continue
+                if identifier.startswith("fleet_"):
+                    try:
+                        fleet_id = int(identifier.removeprefix("fleet_"))
+                    except ValueError:
+                        continue
+                    if fleet_id not in self.fleets:
+                        stale = True
+                        break
+                elif identifier not in self.devices:
+                    stale = True
+                    break
+
+            if stale:
+                _LOGGER.info(
+                    "Removing stale Balena device registry entry %s (%s)",
+                    device_entry.id,
+                    device_entry.identifiers,
+                )
+                device_registry.async_update_device(
+                    device_entry.id,
+                    remove_config_entry_id=self.entry.entry_id,
+                )
 
     async def async_restart_application(
         self, device_uuid: str, service_name: Optional[str] = None

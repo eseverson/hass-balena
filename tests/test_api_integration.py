@@ -201,8 +201,12 @@ class TestAPIIntegrationScenarios:
         options = mock_config_entry["options"].copy()
         options["include_offline_devices"] = True
 
+        mock_entry = MagicMock()
+        mock_entry.entry_id = "test_entry_id"
+
         return BalenaCloudDataUpdateCoordinator(
             mock_hass,
+            mock_entry,
             mock_config_entry["data"],
             options,
         )
