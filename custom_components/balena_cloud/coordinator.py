@@ -49,6 +49,10 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
         self.fleets: Dict[int, BalenaFleet] = {}
         self.devices: Dict[str, BalenaDevice] = {}
 
+        # Track stale fleet IDs already warned about so we don't log every cycle
+        self._warned_stale_fleet_ids: set[str] = set()
+        self._warned_no_match: bool = False
+
         super().__init__(
             hass,
             _LOGGER,
@@ -124,39 +128,60 @@ class BalenaCloudDataUpdateCoordinator(DataUpdateCoordinator):
             if self.selected_fleets:
                 # Convert selected fleet IDs to integers for comparison
                 selected_fleet_ids = set()
+                current_stale_ids: set[str] = set()
                 for fleet_id_str in self.selected_fleets:
                     try:
                         fleet_id = int(fleet_id_str)
                         if fleet_id in self.fleets:
                             selected_fleet_ids.add(fleet_id)
                         else:
-                            _LOGGER.warning(
-                                "Fleet ID %s is selected but not found in available fleets. "
-                                "Available fleet IDs: %s", fleet_id, list(self.fleets.keys())
-                            )
+                            key = str(fleet_id)
+                            current_stale_ids.add(key)
+                            if key not in self._warned_stale_fleet_ids:
+                                self._warned_stale_fleet_ids.add(key)
+                                _LOGGER.warning(
+                                    "Fleet ID %s is selected but not found in "
+                                    "available fleets (likely deleted). "
+                                    "Available fleet IDs: %s. Reconfigure the "
+                                    "integration to remove it.",
+                                    fleet_id, list(self.fleets.keys())
+                                )
                     except (ValueError, TypeError) as err:
-                        _LOGGER.warning("Invalid fleet ID %s: %s", fleet_id_str, err)
+                        key = str(fleet_id_str)
+                        current_stale_ids.add(key)
+                        if key not in self._warned_stale_fleet_ids:
+                            self._warned_stale_fleet_ids.add(key)
+                            _LOGGER.warning(
+                                "Invalid fleet ID %s: %s", fleet_id_str, err
+                            )
                         continue
-                
+
+                # Forget warnings for IDs that have come back so we'd warn
+                # again if they disappear later.
+                self._warned_stale_fleet_ids &= current_stale_ids
+
                 if selected_fleet_ids:
+                    self._warned_no_match = False
                     # Filter devices to only include those in selected fleets
                     filtered_devices = []
                     for device_data in all_devices_raw:
                         device_fleet_id = device_data.get("belongs_to__application", {}).get("__id")
                         if device_fleet_id in selected_fleet_ids:
                             filtered_devices.append(device_data)
-                    
+
                     all_devices = filtered_devices
                     _LOGGER.debug(
                         "Filtered to %d devices in selected fleets (out of %d total devices)",
                         len(all_devices), len(all_devices_raw)
                     )
                 else:
-                    _LOGGER.warning(
-                        "None of the selected fleet IDs matched available fleets. "
-                        "Selected: %s, Available: %s. Showing all devices.",
-                        self.selected_fleets, list(self.fleets.keys())
-                    )
+                    if not self._warned_no_match:
+                        self._warned_no_match = True
+                        _LOGGER.warning(
+                            "None of the selected fleet IDs matched available fleets. "
+                            "Selected: %s, Available: %s. Showing all devices.",
+                            self.selected_fleets, list(self.fleets.keys())
+                        )
                     all_devices = all_devices_raw
             else:
                 # No fleet filter - use all devices

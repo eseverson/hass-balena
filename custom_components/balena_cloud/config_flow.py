@@ -250,22 +250,22 @@ class BalenaCloudOptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                 }
 
-                # Update both data and options
+                # Update entry.data with the fleet selection. entry.options is
+                # written by HA when this flow returns async_create_entry below
+                # — passing data={} there would clobber the options we just set.
                 self.hass.config_entries.async_update_entry(
-                    self.config_entry, data=new_data, options=new_options
+                    self.config_entry, data=new_data
                 )
 
-                # Request reload to apply changes
-                # Use our custom reload function which handles unload gracefully
-                try:
-                    from . import async_reload_entry
-                    self.hass.async_create_task(
-                        async_reload_entry(self.hass, self.config_entry)
-                    )
-                except Exception as reload_err:  # pylint: disable=broad-except
-                    _LOGGER.warning("Failed to trigger reload: %s", reload_err)
+                # Schedule a reload through HA so the entry's state machine
+                # transitions correctly (LOADED → NOT_LOADED → LOADED). The
+                # previous manual reload bypassed this and left platforms in
+                # a state where entities reported unavailable after reconfig.
+                self.hass.config_entries.async_schedule_reload(
+                    self.config_entry.entry_id
+                )
 
-                return self.async_create_entry(title="", data={})
+                return self.async_create_entry(title="", data=new_options)
 
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
@@ -284,6 +284,16 @@ class BalenaCloudOptionsFlowHandler(config_entries.OptionsFlow):
                 str(fleet_id): f"{fleet_name} (ID: {fleet_id})"
                 for fleet_id, fleet_name in self.fleets.items()
             }
+
+        # Drop any previously-selected fleet IDs that no longer exist (e.g.
+        # the fleet was deleted in Balena Cloud). Otherwise voluptuous rejects
+        # the form default with "fleet id is not a valid option" and the user
+        # can't reconfigure.
+        if fleet_options:
+            valid_keys = set(fleet_options.keys())
+            current_fleets = [
+                str(f) for f in current_fleets if str(f) in valid_keys
+            ]
 
         schema_dict = {
             vol.Optional(
