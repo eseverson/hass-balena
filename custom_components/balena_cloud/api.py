@@ -11,8 +11,8 @@ from balena import Balena
 from balena import exceptions as balena_exceptions
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import (ERROR_AUTH_FAILED, ERROR_NETWORK_ERROR, MAX_RETRIES,
-                    RETRY_DELAY)
+from .const import (ERROR_AUTH_FAILED, ERROR_NETWORK_ERROR, ERROR_RATE_LIMITED,
+                    MAX_RETRIES, RETRY_DELAY)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -110,6 +110,33 @@ class BalenaCloudAPIClient:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: method(*args, **kwargs))
 
+    def _handle_request_error(
+        self, err: balena_exceptions.RequestError, context: str
+    ) -> None:
+        """Classify a balena pine RequestError and re-raise a typed error.
+
+        balena's pine client raises a bare ``RequestError`` for every non-2xx
+        response and leaves ``str(err)`` empty, so the HTTP status code and
+        response body -- the only useful diagnostics -- are otherwise lost in
+        the catch-all handlers. Surface them and map the status code to the
+        appropriate integration error type instead of mislabeling everything
+        as a network error.
+        """
+        status_code = getattr(err, "status_code", None)
+        body = (getattr(err, "body", "") or "")[:500]
+
+        _LOGGER.error(
+            "%s: Balena API returned HTTP %s: %s", context, status_code, body
+        )
+
+        if status_code in (401, 403):
+            raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        if status_code == 429:
+            raise BalenaCloudRateLimitError(ERROR_RATE_LIMITED) from err
+        raise BalenaCloudAPIError(
+            f"{ERROR_NETWORK_ERROR} (HTTP {status_code}): {body}"
+        ) from err
+
     @async_retry()
     async def async_get_user_info(self) -> Dict[str, Any]:
         """Get current user information."""
@@ -122,6 +149,8 @@ class BalenaCloudAPIClient:
             balena_exceptions.Unauthorized,
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        except balena_exceptions.RequestError as err:
+            self._handle_request_error(err, "Failed to get user info")
         except Exception as err:
             _LOGGER.error("Failed to get user info: %s", err)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err
@@ -138,6 +167,8 @@ class BalenaCloudAPIClient:
             balena_exceptions.Unauthorized,
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        except balena_exceptions.RequestError as err:
+            self._handle_request_error(err, "Failed to get fleets")
         except Exception as err:
             _LOGGER.error("Failed to get fleets: %s", err)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err
@@ -157,6 +188,8 @@ class BalenaCloudAPIClient:
             balena_exceptions.Unauthorized,
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        except balena_exceptions.RequestError as err:
+            self._handle_request_error(err, f"Failed to get fleet {fleet_id}")
         except Exception as err:
             _LOGGER.error("Failed to get fleet %s: %s", fleet_id, err)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err
@@ -185,6 +218,8 @@ class BalenaCloudAPIClient:
             balena_exceptions.Unauthorized,
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        except balena_exceptions.RequestError as err:
+            self._handle_request_error(err, "Failed to get devices")
         except Exception as err:
             _LOGGER.error("Failed to get devices: %s", err, exc_info=True)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err
@@ -204,6 +239,8 @@ class BalenaCloudAPIClient:
             balena_exceptions.Unauthorized,
         ) as err:
             raise BalenaCloudAuthenticationError(ERROR_AUTH_FAILED) from err
+        except balena_exceptions.RequestError as err:
+            self._handle_request_error(err, f"Failed to get device {device_uuid}")
         except Exception as err:
             _LOGGER.error("Failed to get device %s: %s", device_uuid, err)
             raise BalenaCloudAPIError(ERROR_NETWORK_ERROR) from err

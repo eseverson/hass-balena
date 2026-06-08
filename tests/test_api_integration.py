@@ -12,6 +12,7 @@ from custom_components.balena_cloud.api import (
     BalenaCloudAPIClient,
     BalenaCloudAPIError,
     BalenaCloudAuthenticationError,
+    BalenaCloudRateLimitError,
 )
 from custom_components.balena_cloud.const import API_TIMEOUT
 
@@ -92,6 +93,49 @@ class TestBalenaCloudAPIClient:
             api_client._initialized = True
             with pytest.raises(BalenaCloudAuthenticationError):
                 await api_client.async_get_user_info()
+
+    @pytest.mark.asyncio
+    async def test_request_error_401_maps_to_auth(self, api_client):
+        """A 401 RequestError from pine is auth, not a generic network error."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body='{"message":"Unauthorized"}', status_code=401
+            )
+            with pytest.raises(BalenaCloudAuthenticationError):
+                await api_client.async_get_devices()
+
+    @pytest.mark.asyncio
+    async def test_request_error_403_maps_to_auth(self, api_client):
+        """A 403 RequestError is treated as an authorization failure."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body='{"message":"Forbidden"}', status_code=403
+            )
+            with pytest.raises(BalenaCloudAuthenticationError):
+                await api_client.async_get_devices()
+
+    @pytest.mark.asyncio
+    async def test_request_error_429_maps_to_rate_limit(self, api_client):
+        """A 429 RequestError is surfaced as a rate-limit error."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body='{"message":"Too Many Requests"}', status_code=429
+            )
+            with pytest.raises(BalenaCloudRateLimitError):
+                await api_client.async_get_devices()
+
+    @pytest.mark.asyncio
+    async def test_request_error_surfaces_status_and_body(self, api_client):
+        """Non-auth RequestErrors must expose status code + body for diagnosis."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body='{"message":"boom"}', status_code=500
+            )
+            with pytest.raises(BalenaCloudAPIError) as exc_info:
+                await api_client.async_get_devices()
+            message = str(exc_info.value)
+            assert "500" in message
+            assert "boom" in message
 
     @pytest.mark.asyncio
     async def test_network_error_handling(self, api_client, mock_network_error):
