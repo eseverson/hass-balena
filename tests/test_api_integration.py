@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 from balena import exceptions as balena_exceptions
@@ -14,9 +14,18 @@ from custom_components.balena_cloud.api import (
     BalenaCloudAuthenticationError,
     BalenaCloudRateLimitError,
 )
-from custom_components.balena_cloud.const import API_TIMEOUT
+from custom_components.balena_cloud.const import API_TIMEOUT, MAX_RETRIES
 
 from .conftest import validate_device_data, validate_fleet_data
+
+
+@pytest.fixture(autouse=True)
+def _no_backoff_sleep():
+    """Skip real retry backoff so the (now-retrying) error tests stay fast."""
+    with patch(
+        "custom_components.balena_cloud.api.asyncio.sleep", new=AsyncMock()
+    ) as mock_sleep:
+        yield mock_sleep
 
 
 class TestBalenaCloudAPIClient:
@@ -175,6 +184,43 @@ class TestBalenaCloudAPIClient:
 
             with pytest.raises(BalenaCloudAPIError):
                 await api_client.async_get_user_info()
+
+    @pytest.mark.asyncio
+    async def test_transient_error_is_retried_until_success(self, api_client):
+        """A transient (non-auth) API error is retried, not failed on the first attempt."""
+        devices = [{"uuid": "abc"}]
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = [
+                balena_exceptions.RequestError(body="boom", status_code=500),
+                balena_exceptions.RequestError(body="boom", status_code=500),
+                devices,
+            ]
+            result = await api_client.async_get_devices()
+        assert result == devices
+        assert mock_executor.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_persistent_error_exhausts_budget_and_preserves_type(self, api_client):
+        """A persistent rate-limit error retries the full budget and stays a rate-limit error."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body="slow down", status_code=429
+            )
+            with pytest.raises(BalenaCloudRateLimitError):
+                await api_client.async_get_devices()
+        assert mock_executor.call_count == MAX_RETRIES + 1
+
+    @pytest.mark.asyncio
+    async def test_auth_error_is_not_retried(self, api_client, _no_backoff_sleep):
+        """Authentication failures fail immediately without consuming the retry budget."""
+        with patch.object(api_client, "_run_in_executor") as mock_executor:
+            mock_executor.side_effect = balena_exceptions.RequestError(
+                body="nope", status_code=401
+            )
+            with pytest.raises(BalenaCloudAuthenticationError):
+                await api_client.async_get_devices()
+        assert mock_executor.call_count == 1
+        _no_backoff_sleep.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_device_control_operations(self, api_client):

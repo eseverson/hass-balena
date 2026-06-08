@@ -39,10 +39,17 @@ def async_retry(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
             for attempt in range(max_retries + 1):
                 try:
                     return await func(*args, **kwargs)
+                except BalenaCloudAuthenticationError:
+                    # Auth failures won't fix themselves on retry — fail fast.
+                    raise
                 except (
+                    BalenaCloudAPIError,
                     balena_exceptions.RequestError,
                     balena_exceptions.BalenaException,
                 ) as err:
+                    # The wrapped methods convert balena's bare RequestError into
+                    # typed BalenaCloudAPIError/BalenaCloudRateLimitError before it
+                    # reaches here, so retry on those (not just the raw balena types).
                     last_exception = err
                     if attempt < max_retries:
                         wait_time = delay * (2**attempt)
@@ -63,9 +70,8 @@ def async_retry(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
                         )
 
             if last_exception:
-                raise BalenaCloudAPIError(
-                    f"Failed after {max_retries + 1} attempts"
-                ) from last_exception
+                # Preserve the typed error (rate-limit, etc.) rather than flattening.
+                raise last_exception
 
         return wrapper
 
