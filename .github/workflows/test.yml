@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🐍 Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -76,7 +76,7 @@ jobs:
     name: Security Scan
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🔍 Run Bandit security scan
         uses: tj-actions/bandit@v5.5
@@ -96,7 +96,7 @@ jobs:
     name: Integration Validation
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v6

@@ -12,7 +12,7 @@ jobs:
     name: Check Dependencies
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v6
@@ -66,7 +66,7 @@ jobs:
     name: Validate Manifest
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🔍 Validate manifest.json
         run: |
@@ -141,7 +141,7 @@ jobs:
     name: Prepare Release Notes Template
     steps:
       - name: 🏗️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 📝 Generate release notes template
         run: |
