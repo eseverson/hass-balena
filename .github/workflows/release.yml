@@ -52,7 +52,7 @@ jobs:
           gh release upload ${{ steps.version.outputs.VERSION }} balena_cloud.zip --clobber
 
       - name: 📢 Update release notes
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
