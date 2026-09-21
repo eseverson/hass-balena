@@ -29,6 +29,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           token: ${{ secrets.GH_TOKEN }}
+          cache: "pip"
 
       - name: 📦 Install dependencies
         run: |
