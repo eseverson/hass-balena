@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### ✨ Added
-- Initial release preparation
+## [1.0.6] - 2026-09-20
+
+### 🐛 Fixed
+- Devices are linked to their fleet with `via_device_id`, which replaced `via_device` in Home Assistant 2026.9. The old key made `async_get_or_create` raise whenever Home Assistant could not attribute the call to an integration, silently dropping the entity
+- Transient Balena API errors are retried again: the retry decorator only matched the raw SDK exceptions, which the client had already converted, so one 5xx took down a coordinator update
+- Balena API failures report their HTTP status and body instead of being labeled "Network error occurred" wholesale; 401/403 are classified as authentication errors and 429 as rate limiting
+- Reconfiguring the integration no longer breaks its options and entities
 
 ## [1.0.0] - 2024-12-19
 
