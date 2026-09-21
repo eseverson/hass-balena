@@ -57,6 +57,9 @@ jobs:
 
       - name: 📤 Upload dependency report
         uses: actions/upload-artifact@v7
+        # Artifact upload cannot work on this forge yet: the v4 client refuses
+        # any non-github.com server (me/mu#645). Keep the step, don't fail on it.
+        continue-on-error: true
         with:
           name: dependency-report
           path: dependency_report.md
@@ -184,6 +187,9 @@ jobs:
 
       - name: 📤 Upload release template
         uses: actions/upload-artifact@v7
+        # Artifact upload cannot work on this forge yet: the v4 client refuses
+        # any non-github.com server (me/mu#645). Keep the step, don't fail on it.
+        continue-on-error: true
         with:
           name: release-template
           path: RELEASE_TEMPLATE.md

@@ -65,6 +65,9 @@ jobs:
       - name: 📤 Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v7
+        # Artifact upload cannot work on this forge yet: the v4 client refuses
+        # any non-github.com server (me/mu#645). Keep the step, don't fail on it.
+        continue-on-error: true
         with:
           name: test-results-py${{ matrix.python-version }}-ha${{ matrix.home-assistant-version }}
           path: |
@@ -87,6 +90,9 @@ jobs:
       - name: 📊 Upload security scan results
         if: always()
         uses: actions/upload-artifact@v7
+        # Artifact upload cannot work on this forge yet: the v4 client refuses
+        # any non-github.com server (me/mu#645). Keep the step, don't fail on it.
+        continue-on-error: true
         with:
           name: security-scan-results
           path: bandit-report.json
