@@ -46,7 +46,8 @@ from .const import (
     ICON_TEMPERATURE,
 )
 from .coordinator import BalenaCloudDataUpdateCoordinator
-from .device_registry import async_ensure_fleet_device
+from .device_registry import (async_ensure_fleet_device,
+                              async_get_balena_device_info)
 from .models import BalenaDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -312,12 +313,4 @@ class BalenaCloudSensorEntity(
         if not (device := self.device):
             return None
 
-        return DeviceInfo(
-            identifiers={(DOMAIN, device.uuid)},
-            name=device.display_name,
-            manufacturer="Balena",
-            model=device.device_type,
-            sw_version=device.os_version,
-            configuration_url=f"https://dashboard.balena-cloud.com/devices/{device.uuid}",
-            via_device=(DOMAIN, f"fleet_{device.fleet_id}"),
-        )
+        return async_get_balena_device_info(self, device)

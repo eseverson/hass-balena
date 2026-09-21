@@ -15,6 +15,7 @@ from custom_components.balena_cloud.api import (
 from custom_components.balena_cloud.models import BalenaDevice, BalenaFleet, BalenaDeviceMetrics
 from custom_components.balena_cloud.const import DOMAIN, DEFAULT_UPDATE_INTERVAL
 from custom_components.balena_cloud.coordinator import BalenaCloudDataUpdateCoordinator
+from custom_components.balena_cloud import device_registry
 from custom_components.balena_cloud.sensor import BalenaCloudSensorEntity, SENSOR_TYPES
 
 
@@ -1041,3 +1042,87 @@ class TestSecurityFeaturesUnit:
         # Verify original structure is maintained
         assert "api_token" in protected_data
         assert protected_data["fleets"] == [1001, 1002]
+
+
+class TestDeviceInfoFleetLinkUnit:
+    """Unit tests for linking device entities to their fleet device."""
+
+    @pytest.fixture
+    def sensor(self):
+        """Create a sensor entity for a device belonging to fleet 1001."""
+        device = MagicMock()
+        device.uuid = "test-device-uuid"
+        device.display_name = "Test Device"
+        device.device_type = "raspberrypi4-64"
+        device.os_version = "balenaOS 2024.1.1"
+        device.fleet_id = 1001
+
+        coordinator = MagicMock()
+        coordinator.get_device.return_value = device
+
+        return BalenaCloudSensorEntity(
+            coordinator=coordinator,
+            description=SENSOR_TYPES[0],
+            device_uuid="test-device-uuid",
+        )
+
+    @staticmethod
+    def _add_to_platform(entity, fleet_device):
+        """Pretend the entity was added to a platform with a device registry."""
+        entity.hass = MagicMock()
+        entity.platform = MagicMock()
+        entity.platform.config_entry.entry_id = "test-entry-id"
+
+        registry = MagicMock()
+        registry.async_get_device_by_identifier.return_value = fleet_device
+        return patch(
+            "custom_components.balena_cloud.device_registry.dr.async_get",
+            return_value=registry,
+        ), registry
+
+    def test_device_info_links_fleet_by_registry_id(self, sensor):
+        """The fleet link uses the fleet device's registry id, not its identifiers."""
+        fleet_device = MagicMock()
+        fleet_device.id = "fleet-registry-id"
+        registry_patch, registry = self._add_to_platform(sensor, fleet_device)
+
+        with patch.object(
+            device_registry, "_VIA_DEVICE_ID_SUPPORTED", True
+        ), registry_patch:
+            device_info = sensor.device_info
+
+        registry.async_get_device_by_identifier.assert_called_once_with(
+            (DOMAIN, "fleet_1001"), "test-entry-id"
+        )
+        assert device_info["via_device_id"] == "fleet-registry-id"
+        # via_device is gone from DeviceInfo; leaving it in makes HA drop the entity.
+        assert "via_device" not in device_info
+
+    def test_device_info_omits_link_when_fleet_device_missing(self, sensor):
+        """An unregistered fleet leaves the entity unlinked rather than failing."""
+        registry_patch, _ = self._add_to_platform(sensor, None)
+
+        with patch.object(
+            device_registry, "_VIA_DEVICE_ID_SUPPORTED", True
+        ), registry_patch:
+            device_info = sensor.device_info
+
+        assert "via_device_id" not in device_info
+        assert device_info["name"] == "Test Device"
+
+    def test_device_info_omits_link_before_entity_is_added(self, sensor):
+        """Without hass or a config entry there is no registry to look up."""
+        with patch.object(device_registry, "_VIA_DEVICE_ID_SUPPORTED", True):
+            device_info = sensor.device_info
+
+        assert "via_device_id" not in device_info
+        assert "via_device" not in device_info
+        assert device_info["identifiers"] == {(DOMAIN, "test-device-uuid")}
+
+    def test_device_info_falls_back_to_via_device_on_older_core(self, sensor):
+        """Cores predating via_device_id still get the identifier tuple."""
+        with patch.object(device_registry, "_VIA_DEVICE_ID_SUPPORTED", False):
+            device_info = sensor.device_info
+
+        assert device_info["via_device"] == (DOMAIN, "fleet_1001")
+        assert "via_device_id" not in device_info
