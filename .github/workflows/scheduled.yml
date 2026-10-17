@@ -1,0 +1,20 @@
+name: Scheduled
+
+# Every cron trigger lives here so a forge can turn them all off by disabling
+# this one workflow (Forgejo does); the jobs stay in the workflows they call.
+on:
+  schedule:
+    # Tests daily at 2 AM UTC
+    - cron: "0 2 * * *"
+    # Dependency check weekly on Mondays
+    - cron: "0 8 * * 1"
+
+jobs:
+  test:
+    if: github.event.schedule == '0 2 * * *'
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  dependencies:
+    if: github.event.schedule == '0 8 * * 1'
+    uses: ./.github/workflows/dependencies.yml

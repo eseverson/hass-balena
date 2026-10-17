@@ -1,10 +1,9 @@
 name: Dependencies
 
 on:
-  schedule:
-    # Check for dependency updates weekly on Mondays
-    - cron: "0 8 * * 1"
   workflow_dispatch:
+  # Weekly runs come from scheduled.yml.
+  workflow_call:
 
 jobs:
   check-dependencies:
